@@ -4,3 +4,4 @@ tile.blend
 *.blend1
 # Exclude large source video files (not used on site)
 img/*.mov
+.vercel

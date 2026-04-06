@@ -386,6 +386,22 @@
       .feature-card:nth-child(4):hover { transform: perspective(800px) rotateY(-3deg) scale(1.04) translateY(-8px); }
     }
 
+    /* Tablet: 2x2 grid */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .feature-carousel {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        padding: 30px 20px;
+      }
+      .feature-card {
+        flex: 0 0 calc(50% - 20px);
+      }
+      .feature-card-img {
+        height: 240px;
+      }
+    }
+
     /* Mobile: horizontal scroll snap carousel */
     @media (max-width: 767px) {
       .feature-carousel {
@@ -501,14 +517,14 @@
             <div class="parallax-layer hero-characters hero-intro-hidden absolute inset-0 pointer-events-none flex items-start md:items-center justify-center" data-speed="0.35" style="z-index: 2;">
               <!-- Desktop: canvas for cursor-driven scrub -->
               <canvas id="heroCharCanvas"
-                class="w-[125%] md:w-[58%] lg:w-[52%] max-w-[780px] mt-[30%] md:mt-[-16%] select-none"
+                class="w-[125%] md:w-[145%] lg:w-[52%] md:max-w-none lg:max-w-[780px] mt-[30%] md:mt-[-16%] select-none"
                 style="aspect-ratio: 1898/1072;"></canvas>
               <!-- Mobile: looping video (MP4 first for Safari HEVC alpha support) -->
               <video id="heroCharVideo" autoplay loop muted playsinline preload="auto"
-                class="w-[125%] md:w-[58%] lg:w-[52%] max-w-[780px] mt-[30%] md:mt-[-16%] select-none"
-                style="aspect-ratio: 1898/1072; display: none;" disablepictureinpicture>
-                <source src="video/characters_hero.mp4" type='video/mp4; codecs="hvc1"'>
-                <source src="video/characters_hero.webm" type="video/webm">
+                class="w-[150%] md:w-[120%] lg:w-[52%] max-w-none md:max-w-none lg:max-w-[780px] mt-[30%] md:mt-[-8%] lg:mt-[-16%] select-none"
+                style="aspect-ratio: 1928/1072; display: none;" disablepictureinpicture>
+                <source src="video/run_hero.mp4" type='video/mp4; codecs="hvc1"'>
+                <source src="video/run_hero.webm" type="video/webm">
               </video>
             </div>
 
@@ -523,7 +539,7 @@
             <!-- Hero Content (on top of everything) -->
             <div class="relative z-30 flex h-full w-full items-end justify-center pb-[26%] md:pb-[8%]">
               <div class="hero-content hero-intro-hidden flex flex-col items-center text-center px-6">
-                <h1 class="font-title text-white text-5xl md:text-7xl font-bold leading-[0.9] md:leading-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.6)]">Reach for the Win.</h1>
+                <h1 class="font-title text-white text-5xl md:text-7xl font-bold leading-[0.9] md:leading-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.6)]"><span class="md:hidden">Race for the Win.</span><span class="hidden md:inline">Reach for the Win.</span></h1>
                 <p class="mt-1.5 md:mt-2 text-gray-200 max-w-xl text-sm md:text-lg drop-shadow-lg">Mahjong, reimagined. Fast&nbsp;matches.<br class="hidden md:inline"> Bold characters. Browser. Phone.<br class="hidden md:inline"> Wherever&nbsp;you&nbsp;are.</p>
 
                 <!-- Play Now Button -->
@@ -908,6 +924,7 @@
     const saveData = navigator.connection && navigator.connection.saveData;
     const useVideos = !prefersReducedMotion && !saveData;
     const isMobile = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
+    const isTablet = isMobile && window.innerWidth >= 768 && window.innerWidth < 1024;
 
     const characters = [
       {
@@ -1728,12 +1745,12 @@
         ];
         // Mobile: tiles closer in so they're visible in viewport
         const mobileConfigs = [
-          { x: -2.8, y: 0.5, z: -3.5, s: 0.57, img: 0 },
-          { x: -2.4, y: -0.6, z: -4.0, s: 0.50, img: 1 },
-          { x: 2.6,  y: 0.4, z: -3.5, s: 0.55, img: 2 },
-          { x: 2.2,  y: -1.0, z: -4.2, s: 0.46, img: 3 },
-          { x: -1.8, y: 1.8, z: -3.8, s: 0.44, img: 4 },
-          { x: 2.0,  y: 1.8, z: -3.8, s: 0.42, img: 5 },
+          { x: -2.8, y: 0.5, z: -3.5, s: 0.74, img: 0 },
+          { x: -2.4, y: -0.6, z: -4.0, s: 0.65, img: 1 },
+          { x: 2.6,  y: 0.4, z: -3.5, s: 0.72, img: 2 },
+          { x: 2.2,  y: -1.0, z: -4.2, s: 0.60, img: 3 },
+          { x: -1.8, y: 1.8, z: -3.8, s: 0.57, img: 4 },
+          { x: 2.0,  y: 1.8, z: -3.8, s: 0.55, img: 5 },
         ];
         const configs = isMobile ? mobileConfigs : desktopConfigs;
 
