@@ -149,12 +149,15 @@
     /* Header fade */
     .site-nav {
       background: transparent;
-      transition: background 0.4s ease, backdrop-filter 0.4s ease;
+      transition: background 0.4s ease, backdrop-filter 0.4s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .site-nav.scrolled {
       background: rgba(89,5,5,0.85);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
+    }
+    .site-nav.nav-hidden {
+      transform: translateY(-100%);
     }
 
     /* Character carousel */
@@ -877,6 +880,23 @@
         siteNav.classList.remove('scrolled');
       }
     });
+
+    // Header hide on scroll down, show on scroll up
+    let navLastY = 0;
+    let navHidden = false;
+    window.addEventListener('scroll', () => {
+      const y = window.scrollY;
+      if (y > 120 && y > navLastY + 8) {
+        // Scrolling down past threshold
+        if (!navHidden) { siteNav.classList.add('nav-hidden'); navHidden = true; }
+      } else if (y < navLastY - 4) {
+        // Scrolling up
+        if (navHidden) { siteNav.classList.remove('nav-hidden'); navHidden = false; }
+      }
+      // Always show at top
+      if (y < 60 && navHidden) { siteNav.classList.remove('nav-hidden'); navHidden = false; }
+      navLastY = y;
+    }, { passive: true });
 
     // Init pill position
     requestAnimationFrame(updatePill);
