@@ -1,0 +1,3176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#590505" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#590505" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Mahjong Stars</title>
+  <link rel="preload" as="video" href="video/tony.webm" type="video/webm">
+  <link rel="preload" as="video" href="video/granny.webm" type="video/webm">
+  <link rel="preload" as="video" href="video/characters_hero.webm" type="video/webm">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ms_red: '#d00501',
+            ms_darkred: '#4a0000',
+            ms_bg: '#620000',
+          },
+          fontFamily: {
+            title: ['ClashDisplay', 'sans-serif'],
+            body: ['ClashDisplay', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    @font-face {
+      font-family: 'ClashDisplay';
+      src: url('ClashDisplay-Regular.woff2') format('woff2'),
+           url('ClashDisplay-Regular.woff') format('woff');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'ClashDisplay';
+      src: url('ClashDisplay-Medium.woff2') format('woff2'),
+           url('ClashDisplay-Medium.woff') format('woff');
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'ClashDisplay';
+      src: url('ClashDisplay-Semibold.woff2') format('woff2'),
+           url('ClashDisplay-Semibold.woff') format('woff');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'ClashDisplay';
+      src: url('ClashDisplay-Bold.woff2') format('woff2'),
+           url('ClashDisplay-Bold.woff') format('woff');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'ClashDisplay', sans-serif; background: #590505; color: white; overflow-x: hidden; }
+
+    /* Scroll reveal animations */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-left {
+      opacity: 0;
+      transform: translateX(-60px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-right {
+      opacity: 0;
+      transform: translateX(60px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-scale {
+      opacity: 0;
+      transform: scale(0.85);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible, .reveal-left.visible, .reveal-right.visible, .reveal-scale.visible {
+      opacity: 1;
+      transform: translateY(0) translateX(0) scale(1);
+    }
+    /* Stagger delays for child elements */
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+
+    .bg-pattern {
+      background-image: url('https://web.mstardev.com/images/bg/bg_pattern_v2.png');
+      background-repeat: repeat;
+    }
+
+    /* Transparent video elements */
+    video { background: transparent; }
+    #characterMediaContainer video { max-height: 100%; }
+    #heroCharCanvas { will-change: contents; clip-path: inset(0 2% 3% 2%); }
+
+    /* Hide cursor in hero for 3D tile replacement */
+    #hero section { cursor: none; }
+    #hero section * { cursor: none; }
+    #tileCursorCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* Prevent widows in body copy */
+    p, .feature-card-text p { text-wrap: pretty; }
+    h1, h2, h3, h4 { text-wrap: balance; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #1a0000; }
+    ::-webkit-scrollbar-thumb { background: #4a0000; border-radius: 4px; }
+
+    /* Nav sliding pill */
+    .nav-container { position: relative; }
+    .nav-pill {
+      position: absolute;
+      height: 100%;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.25);
+      transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      top: 0;
+    }
+    .nav-btn { position: relative; border: none !important; background: none !important; }
+    .nav-btn:hover { color: rgba(255,255,255,1); }
+    .nav-btn.active { color: #fff; }
+    .nav-btn:not(.active) { color: rgba(255,255,255,0.7); }
+
+    /* Header fade */
+    .site-nav {
+      background: transparent;
+      transition: background 0.4s ease, backdrop-filter 0.4s ease;
+    }
+    .site-nav.scrolled {
+      background: rgba(89,5,5,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Character carousel */
+    .character-slider { transition: transform 0.5s ease; }
+
+    /* Character transition animations */
+    .char-fade-enter {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    .char-fade-active {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .char-img-enter {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+    .char-img-exit-left {
+      opacity: 0;
+      transform: translateX(-60px) scale(0.95);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .char-img-exit-right {
+      opacity: 0;
+      transform: translateX(60px) scale(0.95);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .char-img-enter-left {
+      opacity: 0;
+      transform: translateX(-60px) scale(0.95);
+    }
+    .char-img-enter-right {
+      opacity: 0;
+      transform: translateX(60px) scale(0.95);
+    }
+    .char-img-active {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Smooth scroll */
+    html { scroll-behavior: smooth; overflow-x: hidden; background: #590505; }
+
+    /* Mobile menu */
+    .mobile-menu { transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s; }
+    .mobile-menu.hidden-menu { opacity: 0; transform: translateY(-12px) scale(0.97); pointer-events: none; visibility: hidden; transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s 0.4s; }
+    .mobile-menu.visible-menu { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; visibility: visible; }
+    .mobile-menu .glass-panel {
+      background: linear-gradient(135deg, rgba(89,5,5,0.75) 0%, rgba(89,5,5,0.6) 100%);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+    .mobile-menu .glass-btn {
+      transition: all 0.2s ease;
+      border-radius: 12px;
+    }
+    .mobile-menu .glass-btn:hover,
+    .mobile-menu .glass-btn:active {
+      background: rgba(255,255,255,0.12);
+    }
+
+    /* Parallax layers */
+    .parallax-layer { will-change: transform; }
+
+    /* Hero intro animations — staggered fade-in + scale (desktop) */
+    @media (min-width: 768px) {
+      .hero-characters {
+        opacity: 0;
+        transform: scale(0.7);
+        animation: heroFadeScale 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+      }
+      .hero-tiles {
+        opacity: 0;
+        transform: scale(0.6);
+        animation: heroFadeScale 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.7s forwards;
+      }
+      .hero-cat {
+        opacity: 0;
+        transform: scale(0.5);
+        animation: heroFadeScaleCat 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.1s forwards;
+      }
+      .hero-content {
+        opacity: 0;
+        transform: translateY(30px);
+        animation: heroContentIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.4s forwards;
+      }
+    }
+
+    /* Mobile: simple fade only, no scale (avoids glitchy scaling) */
+    @media (max-width: 767px) {
+      .hero-characters {
+        opacity: 0;
+        animation: heroFadeOnly 0.8s ease 0.2s forwards;
+      }
+      .hero-tiles {
+        opacity: 0;
+        animation: heroFadeOnly 1s ease 0.5s forwards;
+      }
+      .hero-cat {
+        display: none !important;
+      }
+      .hero-content {
+        opacity: 0;
+        animation: heroFadeOnly 0.8s ease 0.8s forwards;
+      }
+    }
+
+    @keyframes heroFadeOnly {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    @keyframes heroFadeScale {
+      0% { opacity: 0; transform: scale(0.7); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes heroContentIn {
+      0% { opacity: 0; transform: translateY(30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes heroFadeScaleCat {
+      0% { opacity: 0; transform: scale(0.5); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Cat floating animation — plays after intro finishes */
+    @keyframes catFloat {
+      0%, 100% { transform: translateY(0) rotate(-3deg); }
+      50% { transform: translateY(-20px) rotate(3deg); }
+    }
+    .cat-float-active {
+      opacity: 1 !important;
+      animation: catFloat 4s ease-in-out infinite !important;
+    }
+
+    /* ===== Feature 3D Carousel ===== */
+    .feature-carousel {
+      display: flex;
+      gap: 24px;
+      padding: 40px 0;
+      perspective: 1200px;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    .feature-card {
+      flex: 0 0 280px;
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      transform-style: preserve-3d;
+      cursor: pointer;
+    }
+
+    .feature-card-inner {
+      background: linear-gradient(to bottom, rgba(74,0,0,0.6), rgba(30,0,0,0.8));
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      overflow: hidden;
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      backdrop-filter: blur(10px);
+    }
+
+    .feature-card:hover .feature-card-inner {
+      border-color: rgba(255,255,255,0.2);
+      background: linear-gradient(to bottom, rgba(90,0,0,0.7), rgba(40,0,0,0.9));
+      box-shadow: 0 30px 60px rgba(0,0,0,0.4), 0 0 40px rgba(208,5,1,0.1);
+    }
+
+    .feature-card-img {
+      width: 100%;
+      height: 320px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 20px 20px 0;
+      overflow: hidden;
+    }
+
+    .feature-card-img img {
+      max-height: 100%;
+      max-width: 100%;
+      object-fit: contain;
+      user-select: none;
+      transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .feature-card:hover .feature-card-img img {
+      transform: scale(1.05) translateY(-5px);
+    }
+
+    .feature-card-text {
+      padding: 20px 24px 28px;
+      text-align: center;
+    }
+
+    .feature-card-text h4 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: white;
+    }
+
+    .feature-card-text p {
+      font-size: 0.9rem;
+      color: rgba(209, 213, 219, 1);
+      line-height: 1.5;
+    }
+
+    /* Desktop: 3D perspective tilt on hover */
+    @media (min-width: 768px) {
+      .feature-card {
+        transform: rotateY(0deg) scale(1);
+      }
+      .feature-card:hover {
+        transform: rotateY(0deg) scale(1.04) translateY(-8px);
+        z-index: 10;
+      }
+      .feature-card:nth-child(1):hover { transform: perspective(800px) rotateY(3deg) scale(1.04) translateY(-8px); }
+      .feature-card:nth-child(2):hover { transform: perspective(800px) rotateY(1deg) scale(1.04) translateY(-8px); }
+      .feature-card:nth-child(3):hover { transform: perspective(800px) rotateY(-1deg) scale(1.04) translateY(-8px); }
+      .feature-card:nth-child(4):hover { transform: perspective(800px) rotateY(-3deg) scale(1.04) translateY(-8px); }
+    }
+
+    /* Mobile: horizontal scroll snap carousel */
+    @media (max-width: 767px) {
+      .feature-carousel {
+        justify-content: flex-start;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        padding: 20px 40px;
+        gap: 16px;
+        scrollbar-width: none;
+      }
+      .feature-carousel::-webkit-scrollbar { display: none; }
+      .feature-card {
+        flex: 0 0 85vw;
+        scroll-snap-align: center;
+      }
+    }
+
+    /* AI glow pulse */
+    .ai-pulse {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    /* Phone light overlay */
+    .phone-light-pulse {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+  </style>
+</head>
+<body>
+  <!-- Hero intro: tiles explode from center, then content fades in -->
+  <style>
+    /* Hero layers hidden initially, revealed after tile explosion.
+       Uses opacity only (not transform) to avoid conflicting with parallax scroll transforms. */
+    .hero-intro-hidden {
+      opacity: 0 !important;
+      transition: opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1) !important;
+    }
+    .hero-intro-hidden.hero-revealed {
+      opacity: 1 !important;
+    }
+  </style>
+
+  <canvas id="tileCursorCanvas"></canvas>
+  <div class="min-h-screen w-full relative">
+    <!-- Background Pattern Overlay -->
+    <div class="absolute inset-0 bg-pattern opacity-10 pointer-events-none"></div>
+
+    <!-- Main Content -->
+    <div class="relative z-10">
+      <div>
+        <!-- ========== NAV ========== -->
+        <nav class="site-nav fixed top-0 left-0 w-full z-50">
+          <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <!-- Mobile Hamburger -->
+            <div class="md:hidden">
+              <button id="hamburger" class="cursor-pointer flex flex-col h-8 w-8 justify-center items-center gap-[4px] group">
+                <div class="h-[1.5px] w-5 rounded-full bg-white/50 transition ease transform duration-300 group-hover:bg-white/80"></div>
+                <div class="h-[1.5px] w-5 rounded-full bg-white/50 transition ease transform duration-300 group-hover:bg-white/80"></div>
+              </button>
+            </div>
+
+            <!-- Logo (absolute center on mobile) -->
+            <img alt="Logo" class="h-10 absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0 md:mx-0" src="https://web.mstardev.com/images/Logo.png">
+
+            <!-- Desktop Nav Links -->
+            <div class="nav-container hidden md:flex items-center gap-1 text-white font-semibold rounded-full bg-white/5 border border-white/10 px-1 py-1">
+              <div class="nav-pill" id="navPill"></div>
+              <button class="nav-btn active px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="scrollToSection('hero')">HOME</button>
+              <button class="nav-btn px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="scrollToSection('features')">FEATURES</button>
+              <button class="nav-btn px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="scrollToSection('game')">GAME</button>
+              <button class="nav-btn px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="scrollToSection('characters')">CHARACTER</button>
+              <button class="nav-btn px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="scrollToSection('download')">DOWNLOAD</button>
+              <button class="nav-btn px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="scrollToSection('footer')">SUPPORT</button>
+            </div>
+
+            <!-- Login Button -->
+            <a href="https://game.mstardev.com/" class="hidden md:block">
+              <button class="bg-ms_red hover:bg-[#B00400] text-white font-bold px-5 py-2 rounded-md transition cursor-pointer text-sm">LOG IN / REGISTER</button>
+            </a>
+          </div>
+        </nav>
+
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="mobile-menu hidden-menu fixed top-[72px] left-4 right-4 z-40 md:hidden">
+          <div class="glass-panel rounded-2xl px-3 py-3 flex flex-col gap-1">
+            <button class="glass-btn text-white/90 font-semibold py-3 px-4 text-left text-sm tracking-wide" onclick="scrollToSection('hero')">HOME</button>
+            <button class="glass-btn text-white/90 font-semibold py-3 px-4 text-left text-sm tracking-wide" onclick="scrollToSection('features')">FEATURES</button>
+            <button class="glass-btn text-white/90 font-semibold py-3 px-4 text-left text-sm tracking-wide" onclick="scrollToSection('game')">GAME</button>
+            <button class="glass-btn text-white/90 font-semibold py-3 px-4 text-left text-sm tracking-wide" onclick="scrollToSection('characters')">CHARACTER</button>
+            <button class="glass-btn text-white/90 font-semibold py-3 px-4 text-left text-sm tracking-wide" onclick="scrollToSection('download')">DOWNLOAD</button>
+            <button class="glass-btn text-white/90 font-semibold py-3 px-4 text-left text-sm tracking-wide" onclick="scrollToSection('footer')">SUPPORT</button>
+          </div>
+        </div>
+
+        <!-- ========== HERO SECTION (PARALLAX) ========== -->
+        <div id="hero">
+          <section class="relative h-screen w-full overflow-hidden" style="background: #590505;">
+            <!-- Radial gradient glow behind characters -->
+            <div class="parallax-layer hero-intro-hidden absolute inset-0 pointer-events-none" data-speed="0.1">
+              <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[65%] w-[600px] h-[600px] md:w-[1400px] md:h-[1400px] rounded-full" style="background: radial-gradient(circle, #FF0000 0%, #dd0000 20%, #990000 45%, transparent 70%); opacity: 0.85; filter: blur(30px);"></div>
+            </div>
+
+            <!-- LAYER 1: 3D floating tiles (starts above characters for intro, drops behind after explosion) -->
+            <div id="bgTilesLayer" class="parallax-layer absolute inset-0 pointer-events-none" data-speed="0.12" style="z-index: 10; transition: z-index 0s;">
+              <canvas id="bgTilesCanvas" style="width: 100%; height: 100%;"></canvas>
+            </div>
+
+            <!-- LAYER 2: Characters (front - faster parallax) -->
+            <div class="parallax-layer hero-characters hero-intro-hidden absolute inset-0 pointer-events-none flex items-start md:items-center justify-center" data-speed="0.35" style="z-index: 2;">
+              <!-- Desktop: canvas for cursor-driven scrub -->
+              <canvas id="heroCharCanvas"
+                class="w-[125%] md:w-[58%] lg:w-[52%] max-w-[780px] mt-[30%] md:mt-[-16%] select-none"
+                style="aspect-ratio: 1898/1072;"></canvas>
+              <!-- Mobile: looping video (MP4 first for Safari HEVC alpha support) -->
+              <video id="heroCharVideo" autoplay loop muted playsinline preload="auto"
+                class="w-[125%] md:w-[58%] lg:w-[52%] max-w-[780px] mt-[30%] md:mt-[-16%] select-none"
+                style="aspect-ratio: 1898/1072; display: none;" disablepictureinpicture>
+                <source src="video/characters_hero.mp4" type='video/mp4; codecs="hvc1"'>
+                <source src="video/characters_hero.webm" type="video/webm">
+              </video>
+            </div>
+
+            <!-- LAYER 3: Cat floating (near granny, right side) — hidden on mobile -->
+            <div id="heroCat" class="parallax-layer hero-cat hero-intro-hidden absolute pointer-events-none" data-speed="0.25" style="right: 28%; top: 28%; z-index: 3;">
+              <img id="heroCatImg" src="img/cat_cropped.webp" alt="Cat" class="w-14 md:w-20 object-contain select-none transition-transform duration-200" draggable="false">
+            </div>
+
+            <!-- Bottom fade to next section -->
+            <div class="absolute bottom-0 left-0 w-full h-48 pointer-events-none z-20" style="background: linear-gradient(to top, #620000 0%, transparent 100%);"></div>
+
+            <!-- Hero Content (on top of everything) -->
+            <div class="relative z-30 flex h-full w-full items-end justify-center pb-[26%] md:pb-[8%]">
+              <div class="hero-content hero-intro-hidden flex flex-col items-center text-center px-6">
+                <h1 class="font-title text-white text-5xl md:text-7xl font-bold leading-[0.9] md:leading-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.6)]">Reach for the Win.</h1>
+                <p class="mt-1.5 md:mt-2 text-gray-200 max-w-xl text-sm md:text-lg drop-shadow-lg">Mahjong, reimagined. Fast&nbsp;matches.<br class="hidden md:inline"> Bold characters. Browser. Phone.<br class="hidden md:inline"> Wherever&nbsp;you&nbsp;are.</p>
+
+                <!-- Play Now Button -->
+                <a id="heroPlayBtn" href="https://game.mstardev.com/" class="mt-4 md:mt-6" style="transition: opacity 0.4s ease;">
+                  <button class="bg-ms_red hover:bg-red-700 text-white font-bold text-base md:text-lg px-8 md:px-10 py-3 rounded-md shadow-[0_4px_30px_rgba(208,5,1,0.5)] transition cursor-pointer hover:shadow-[0_4px_40px_rgba(208,5,1,0.7)]">PLAY NOW</button>
+                </a>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ========== FEATURES SECTION (3D Carousel) ========== -->
+        <div id="features">
+          <section class="px-4 md:px-6 py-12 md:py-20 bg-ms_bg text-white overflow-hidden">
+            <div class="max-w-3xl mx-auto text-center mb-10 md:mb-16">
+              <h1 class="font-title text-4xl md:text-7xl font-bold mb-4 leading-[0.9] reveal">Easy to learn.<br>Hard to stop.</h1>
+              <p class="text-gray-300 reveal reveal-delay-1">Classic Mahjong. Fresh characters. Fair matches.<br>No pay-to-win. Just play.</p>
+            </div>
+
+            <!-- 3D Carousel Container -->
+            <div class="feature-carousel-wrapper relative max-w-7xl mx-auto">
+              <div class="feature-carousel" id="featureCarousel">
+                <!-- Card 1: Your Rules -->
+                <div class="feature-card reveal-scale reveal-delay-1" data-index="0">
+                  <div class="feature-card-inner">
+                    <div class="feature-card-img">
+                      <img src="img/win.webp" alt="Your Rules" draggable="false">
+                    </div>
+                    <div class="feature-card-text">
+                      <h4>Your Rules</h4>
+                      <p>Casual. Competitive. Chill. You pick the&nbsp;vibe.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Card 2: Smart AI -->
+                <div class="feature-card reveal-scale reveal-delay-2" data-index="1">
+                  <div class="feature-card-inner">
+                    <div class="feature-card-img relative">
+                      <img src="img/AI_off.webp" alt="Smart AI" class="absolute inset-0 w-full h-full object-contain z-10" draggable="false">
+                      <img src="img/AI.webp" alt="Smart AI Glow" class="absolute inset-0 w-full h-full object-contain z-20 ai-pulse" draggable="false">
+                    </div>
+                    <div class="feature-card-text">
+                      <h4>Smart AI</h4>
+                      <p>They learn. They adapt. Don't get&nbsp;comfortable.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Card 3: Collect Them All -->
+                <div class="feature-card reveal-scale reveal-delay-3" data-index="2">
+                  <div class="feature-card-inner">
+                    <div class="feature-card-img">
+                      <img src="img/grannytreasure.webp" alt="Collect Them All" draggable="false">
+                    </div>
+                    <div class="feature-card-text">
+                      <h4>Collect Them All</h4>
+                      <p>Characters. Styles. Flex on friends.&nbsp;Repeat.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Card 4: Bring Friends -->
+                <div class="feature-card reveal-scale reveal-delay-4" data-index="3">
+                  <div class="feature-card-inner">
+                    <div class="feature-card-img">
+                      <img src="img/selfie.webp" alt="Bring Friends" draggable="false">
+                    </div>
+                    <div class="feature-card-text">
+                      <h4>Bring Friends</h4>
+                      <p>Or enemies. Same thing at the&nbsp;table.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mobile nav dots -->
+              <div class="flex justify-center gap-3 mt-8 md:hidden" id="featureDots">
+                <button onclick="goToFeature(0)" class="w-3 h-3 rounded-full bg-white transition-all"></button>
+                <button onclick="goToFeature(1)" class="w-3 h-3 rounded-full bg-white/40 transition-all"></button>
+                <button onclick="goToFeature(2)" class="w-3 h-3 rounded-full bg-white/40 transition-all"></button>
+                <button onclick="goToFeature(3)" class="w-3 h-3 rounded-full bg-white/40 transition-all"></button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ========== GAME MODES SECTION ========== -->
+        <div id="game">
+          <section class="px-4 md:px-6 py-12 md:py-20 bg-ms_bg text-white">
+            <div class="max-w-3xl mx-auto">
+              <!-- Name + Description — Top -->
+              <div class="text-center max-w-md mx-auto mb-8 md:mb-12 reveal">
+                <h1 id="gameModeName" class="text-4xl md:text-7xl font-bold text-white mb-3 char-fade-active drop-shadow-lg">Bang Bang Mahjong</h1>
+                <p id="gameModeDesc" class="text-gray-400 text-sm md:text-base char-fade-active" style="transition-delay: 0.1s">Fast. Loud. No time to think. That's the point.</p>
+              </div>
+
+              <!-- Game Mode Image -->
+              <div class="flex justify-center mb-8 reveal-scale reveal-delay-1">
+                <img id="gameModeImg" src="img/tablephone1.webp" alt="Game Mode" class="w-[110%] max-w-none md:w-full md:max-w-2xl rounded-2xl char-img-active" draggable="false">
+              </div>
+
+              <!-- Navigation -->
+              <div class="flex items-center justify-center gap-6 mt-8">
+                <button onclick="prevGameMode()" class="cursor-pointer hover:scale-110 transition w-10 h-10 rounded-full border border-white/20 flex items-center justify-center hover:border-white/50 hover:bg-white/5">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <div class="flex gap-2" id="gameModeDots">
+                  <button onclick="goToGameMode(0)" class="w-2.5 h-2.5 rounded-full bg-white transition-all duration-300"></button>
+                  <button onclick="goToGameMode(1)" class="w-2.5 h-2.5 rounded-full bg-white/30 transition-all duration-300"></button>
+                </div>
+                <button onclick="nextGameMode()" class="cursor-pointer hover:scale-110 transition w-10 h-10 rounded-full border border-white/20 flex items-center justify-center hover:border-white/50 hover:bg-white/5">
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ========== CHARACTERS SECTION ========== -->
+        <div id="characters">
+          <section class="relative bg-ms_bg px-4 md:px-6 py-8 md:py-16 overflow-hidden">
+            <!-- Parallax mask background -->
+            <div class="absolute inset-0 pointer-events-none" style="background-image: url('https://web.mstardev.com/images/bg/Character_overlay.png'); background-size: cover; background-position: center; background-attachment: fixed; opacity: 0.15; -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 30%, transparent 80%); mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 30%, transparent 80%);"></div>
+
+            <!-- Background overlay with parallax -->
+            <div class="absolute inset-0 pointer-events-none" style="background-image: url('https://web.mstardev.com/images/bg/Character_bg_v3.png'); background-size: cover; background-position: center; background-attachment: fixed; opacity: 0.12; -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 70%); mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 70%);"></div>
+
+            <!-- Top gradient -->
+            <div class="absolute top-0 left-0 w-full h-140 pointer-events-none bg-gradient-to-b from-[#620000] to-transparent"></div>
+            <!-- Bottom gradient -->
+            <div class="absolute bottom-0 left-0 w-full h-80 pointer-events-none bg-gradient-to-t from-[#620000] to-transparent"></div>
+
+            <!-- Title -->
+            <div class="relative z-10 max-w-3xl mx-auto text-center mb-6 md:mb-12">
+              <h1 class="text-4xl md:text-7xl font-bold text-white drop-shadow-lg reveal">Meet the Stars</h1>
+            </div>
+
+            <!-- Character Carousel — Side by Side -->
+            <div class="relative z-10 max-w-6xl mx-auto">
+              <div class="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-16">
+                <!-- Left: Character Image -->
+                <div class="flex-shrink-0 w-64 md:w-[340px] h-[360px] md:h-[480px] flex items-end justify-center overflow-hidden reveal-left">
+                  <div id="characterMediaContainer" class="h-full w-full flex items-end justify-center">
+                    <video id="characterVideo" autoplay loop muted playsinline preload="auto"
+                      class="h-full w-auto object-contain char-img-active" draggable="false" disablepictureinpicture>
+                      <source src="video/tony.mp4" type='video/mp4; codecs="hvc1"'>
+                      <source src="video/tony.webm" type="video/webm">
+                    </video>
+                  </div>
+                </div>
+
+                <!-- Right: Text + Controls -->
+                <div class="flex-1 text-center md:text-left max-w-xs md:max-w-sm reveal-right reveal-delay-2">
+                  <h2 id="charName" class="text-3xl md:text-4xl font-bold text-white mb-3 char-fade-active">Tony Kong</h2>
+                  <p id="charQuote" class="text-white/70 text-base md:text-lg italic mb-4 char-fade-active" style="transition-delay: 0.1s">"I don't chase Luck. I create it."</p>
+                  <p id="charDesc" class="text-gray-400 text-sm md:text-base leading-relaxed mb-8 char-fade-active" style="transition-delay: 0.2s">Confident. Calculated. Already read your hand. Turns bad tiles into winning moves. Every. Single. Time.</p>
+
+                  <!-- Progress Bar -->
+                  <div class="flex gap-2 mb-6 justify-center md:justify-start" id="charProgressBars">
+                    <button onclick="goToCharacter(0)" class="h-1 rounded-full transition-all duration-300 bg-white w-12"></button>
+                    <button onclick="goToCharacter(1)" class="h-1 rounded-full transition-all duration-300 bg-white/30 w-8"></button>
+                    <button onclick="goToCharacter(2)" class="h-1 rounded-full transition-all duration-300 bg-white/30 w-8"></button>
+                    <button onclick="goToCharacter(3)" class="h-1 rounded-full transition-all duration-300 bg-white/30 w-8"></button>
+                  </div>
+
+                  <!-- Arrows -->
+                  <div class="flex gap-3 justify-center md:justify-start">
+                    <button onclick="prevCharacter()" class="cursor-pointer hover:scale-110 transition w-10 h-10 rounded-full border border-white/20 flex items-center justify-center hover:border-white/50 hover:bg-white/5">
+                      <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <button onclick="nextCharacter()" class="cursor-pointer hover:scale-110 transition w-10 h-10 rounded-full border border-white/20 flex items-center justify-center hover:border-white/50 hover:bg-white/5">
+                      <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </section>
+        </div>
+
+        <!-- ========== DOWNLOAD / PLAY ANYWHERE SECTION ========== -->
+        <div id="download">
+          <section class="px-4 md:px-6 py-12 md:py-20 bg-ms_bg text-white">
+            <div class="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-8 md:gap-12">
+              <!-- Cat with phone glow -->
+              <div class="flex-shrink-0 relative w-[60%] md:w-full max-w-sm mx-auto reveal-left">
+                <video id="catVideo" autoplay loop muted playsinline preload="auto"
+                  class="w-full relative z-10" disablepictureinpicture>
+                  <source src="video/catmoving.mp4" type='video/mp4; codecs="hvc1"'>
+                  <source src="video/catmoving.webm" type="video/webm">
+                  <img src="img/catphone.webp" alt="Cat playing" class="w-full">
+                </video>
+                <!-- light overlay disabled -->
+                <!-- <img src="img/catphonelight.png" alt="" class="w-full absolute inset-0 z-20 phone-light-pulse" draggable="false"> -->
+              </div>
+              <!-- Text + Buttons -->
+              <div class="text-center md:text-left reveal-right reveal-delay-1">
+                <h1 class="text-4xl md:text-7xl font-bold mb-4 drop-shadow-lg">Play Anywhere</h1>
+                <p class="text-gray-300 mb-8 text-lg">Couch. Commute. Lunch break. We&nbsp;don't&nbsp;judge.</p>
+
+                <a href="https://game.mstardev.com/">
+                  <button class="bg-ms_red hover:bg-[#B00400] text-white font-bold px-10 py-3 rounded-md shadow-lg transition cursor-pointer mb-6">PLAY NOW</button>
+                </a>
+
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ========== FOOTER ========== -->
+        <footer id="footer" class="bg-black text-white px-6 py-12">
+          <div class="max-w-5xl mx-auto">
+            <div class="flex flex-wrap gap-6 justify-center mb-8 text-sm reveal">
+              <a href="#" onclick="event.preventDefault(); openHowToPlay();" class="text-gray-300 hover:text-white transition">How To Play</a>
+              <a href="#" onclick="event.preventDefault(); openSupportOverlay();" class="text-gray-300 hover:text-white transition">Support</a>
+              <a href="#" onclick="event.preventDefault(); openTermsOverlay();" class="text-gray-300 hover:text-white transition">Terms and Conditions</a>
+              <a href="#" onclick="event.preventDefault(); openPrivacyOverlay();" class="text-gray-300 hover:text-white transition">Privacy Policy</a>
+              <a href="#" onclick="event.preventDefault(); openCookiePolicyOverlay();" class="text-gray-300 hover:text-white transition">Cookie Policy</a>
+              <a href="#" onclick="event.preventDefault(); openCookieSettingsOverlay();" class="text-gray-300 hover:text-white transition">Cookie Settings</a>
+            </div>
+
+            <div class="text-center">
+              <h4 class="font-bold text-sm mb-2">RESPONSIBLE PLAY NOTICE</h4>
+              <p class="text-gray-400 text-xs max-w-2xl mx-auto leading-relaxed">Mahjong Stars is a social game intended for an adult audience. The game does not offer real-money gambling or prizes. In-game currency has no real-world value and cannot be exchanged for cash or goods. Play responsibly and set your own limits.</p>
+            </div>
+
+            <div class="flex items-center justify-between mt-8 border-t border-white/10 pt-6">
+              <p class="text-gray-500 text-xs">&copy;2026 WASABI GAMES DMCC</p>
+              <a href="https://www.instagram.com/mahjongstars" target="_blank" class="text-gray-400 hover:text-white transition">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+              </a>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== COOKIE BANNER ========== -->
+  <div id="cookieBanner" class="fixed bottom-0 left-0 w-full z-50 bg-black/90 backdrop-blur-md border-t border-white/20 px-6 py-4 text-white transition-all duration-500 translate-y-full opacity-0">
+    <div class="max-w-5xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <p class="text-gray-300 text-sm leading-relaxed text-left">
+        We use cookies to improve your experience and analyze traffic. You can accept all, reject non-essential cookies, or customize your preferences.
+        <button type="button" onclick="event.stopPropagation(); openCookiePolicyOverlay();" class="underline text-gray-200 hover:text-white ml-1 cursor-pointer">Read more</button>
+      </p>
+      <div class="flex gap-3">
+        <button type="button" onclick="closeCookieBanner()" class="bg-white/10 border border-white/20 px-4 py-2 rounded hover:bg-white/20 transition cursor-pointer">Reject</button>
+        <button type="button" onclick="event.stopPropagation(); openCookieSettingsOverlay();" class="bg-white/10 border border-white/20 px-4 py-2 rounded hover:bg-white/20 transition cursor-pointer">Customize</button>
+        <button type="button" onclick="closeCookieBanner()" class="bg-ms_red hover:bg-[#B00400] text-white font-semibold px-6 py-2 rounded transition cursor-pointer">Accept</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Cookie banner — show after first scroll
+    function closeCookieBanner() {
+      const b = document.getElementById('cookieBanner');
+      b.classList.add('translate-y-full', 'opacity-0');
+      setTimeout(() => { b.style.display = 'none'; }, 500);
+    }
+    let cookieShown = false;
+    window.addEventListener('scroll', () => {
+      if (cookieShown) return;
+      if (window.scrollY > 50) {
+        cookieShown = true;
+        const b = document.getElementById('cookieBanner');
+        b.classList.remove('translate-y-full', 'opacity-0');
+      }
+    }, { passive: true });
+
+    // Mobile menu
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    let menuOpen = false;
+
+    hamburger.addEventListener('click', () => {
+      menuOpen = !menuOpen;
+      if (menuOpen) {
+        mobileMenu.classList.remove('hidden-menu');
+        mobileMenu.classList.add('visible-menu');
+      } else {
+        mobileMenu.classList.remove('visible-menu');
+        mobileMenu.classList.add('hidden-menu');
+      }
+    });
+
+    // Sliding pill indicator
+    const navPill = document.getElementById('navPill');
+    const siteNav = document.querySelector('.site-nav');
+    let navClickLock = false;
+
+    function updatePill() {
+      const activeBtn = document.querySelector('.nav-btn.active');
+      if (activeBtn && navPill) {
+        const container = activeBtn.parentElement;
+        const containerRect = container.getBoundingClientRect();
+        const btnRect = activeBtn.getBoundingClientRect();
+        navPill.style.left = (btnRect.left - containerRect.left) + 'px';
+        navPill.style.width = btnRect.width + 'px';
+      }
+    }
+
+    // Scroll to section
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        // Lock scroll-based nav updates so pill slides directly to target
+        navClickLock = true;
+        el.scrollIntoView({ behavior: 'smooth' });
+        // Close mobile menu
+        menuOpen = false;
+        mobileMenu.classList.remove('visible-menu');
+        mobileMenu.classList.add('hidden-menu');
+        // Release lock after scroll completes
+        setTimeout(() => { navClickLock = false; }, 800);
+      }
+      // Update active nav button immediately
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      requestAnimationFrame(updatePill);
+    }
+
+    // Active nav on scroll
+    const sections = ['hero', 'features', 'game', 'characters', 'download', 'footer'];
+    const navButtons = document.querySelectorAll('.nav-btn');
+
+    window.addEventListener('scroll', () => {
+      // Skip section detection while click-scroll is animating
+      if (!navClickLock) {
+        let current = '';
+        for (const id of sections) {
+          const section = document.getElementById(id);
+          if (section) {
+            const rect = section.getBoundingClientRect();
+            if (rect.top <= 150) current = id;
+          }
+        }
+        navButtons.forEach((btn, i) => {
+          if (sections[i] === current) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+        updatePill();
+      }
+
+      // Header fade on scroll (always runs)
+      if (window.scrollY > 80) {
+        siteNav.classList.add('scrolled');
+      } else {
+        siteNav.classList.remove('scrolled');
+      }
+    });
+
+    // Init pill position
+    requestAnimationFrame(updatePill);
+    window.addEventListener('resize', updatePill);
+
+    // Character carousel data
+    // Performance: check reduced motion / data saver
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const saveData = navigator.connection && navigator.connection.saveData;
+    const useVideos = !prefersReducedMotion && !saveData;
+    const isMobile = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
+
+    const characters = [
+      {
+        name: 'Tony Kong',
+        quote: '"I don\'t chase Luck. I create it."',
+        desc: 'Confident. Calculated. Already read your hand. Turns bad tiles into winning moves. Every. Single. Time.',
+        img: 'img/Tony_2586.webp',
+        type: useVideos ? 'video' : 'image',
+        videoWebm: 'video/tony.webm',
+        videoMp4: 'video/tony.mp4'
+      },
+      {
+        name: 'Bubble Tea Girl',
+        quote: '"Watch closely \u2014 you might miss it."',
+        desc: 'Bright. Bold. Lightning fast. Turns every match into a show. Plays with style, confidence, and just enough chaos to keep you guessing.',
+        img: 'img/Bubble_2585.webp',
+        type: useVideos ? 'video' : 'image',
+        videoWebm: 'video/bubbletea.webm',
+        videoMp4: 'video/bubbletea.mp4'
+      },
+      {
+        name: 'Mrs Cheng',
+        quote: '"Let me show you how it\'s really done."',
+        desc: 'Decades of experience. Nerves of steel. Plays the long game \u2014 and she always finishes it. Don\'t let the silence fool you.',
+        img: 'img/Granny_2583.webp',
+        type: useVideos ? 'video' : 'image',
+        videoWebm: 'video/granny.webm',
+        videoMp4: 'video/granny.mp4'
+      },
+      {
+        name: '\u201cBusy\u201dness Man',
+        quote: '"I don\'t have time for this. Wait\u2026 one more round."',
+        desc: 'Busy. Stressed. Somehow still winning. Briefcase in one hand, phone in the other. Always late. Never loses.',
+        img: 'img/executive_2584.webp',
+        type: 'image'
+      }
+    ];
+
+    let currentChar = 0;
+
+    // dir: 'left' = next (new slides in from right), 'right' = prev (new slides in from left)
+    function updateCharacter(dir) {
+      dir = dir || 'left';
+      const c = characters[currentChar];
+      const container = document.getElementById('characterMediaContainer');
+      const name = document.getElementById('charName');
+      const quote = document.getElementById('charQuote');
+      const desc = document.getElementById('charDesc');
+
+      const exitClass = dir === 'left' ? 'char-img-exit-left' : 'char-img-exit-right';
+      const enterClass = dir === 'left' ? 'char-img-enter-right' : 'char-img-enter-left';
+
+      // Get current media element (video or img)
+      const currentMedia = container.querySelector('video, img');
+
+      // Animate out (slide out in swipe direction)
+      if (currentMedia) {
+        currentMedia.classList.remove('char-img-active');
+        currentMedia.classList.add(exitClass);
+      }
+      [name, quote, desc].forEach(el => {
+        el.classList.remove('char-fade-active');
+        el.classList.add('char-fade-enter');
+      });
+
+      setTimeout(() => {
+        // Remove old media
+        container.innerHTML = '';
+
+        // Create new media element
+        let newMedia;
+        if (c.type === 'video') {
+          newMedia = document.createElement('video');
+          newMedia.autoplay = true;
+          newMedia.loop = true;
+          newMedia.muted = true;
+          newMedia.playsInline = true;
+          newMedia.disablePictureInPicture = true;
+          newMedia.preload = 'auto';
+
+          const srcMp4 = document.createElement('source');
+          srcMp4.src = c.videoMp4;
+          srcMp4.type = 'video/mp4; codecs="hvc1"';
+          newMedia.appendChild(srcMp4);
+
+          const srcWebm = document.createElement('source');
+          srcWebm.src = c.videoWebm;
+          srcWebm.type = 'video/webm';
+          newMedia.appendChild(srcWebm);
+        } else {
+          newMedia = document.createElement('img');
+          newMedia.src = c.img;
+          newMedia.alt = c.name;
+        }
+
+        // New media enters from opposite side
+        newMedia.className = 'h-full w-auto object-contain ' + enterClass;
+        newMedia.draggable = false;
+        container.appendChild(newMedia);
+
+        name.textContent = c.name;
+        quote.textContent = c.quote;
+        desc.textContent = c.desc;
+
+        // Animate in (slide to center)
+        requestAnimationFrame(() => {
+          newMedia.classList.remove(enterClass);
+          newMedia.classList.add('char-img-active');
+          [name, quote, desc].forEach((el, i) => {
+            el.classList.remove('char-fade-enter');
+            el.classList.add('char-fade-active');
+            el.style.transitionDelay = `${i * 0.1}s`;
+          });
+        });
+      }, 300);
+
+      // Update progress bars
+      const bars = document.querySelectorAll('#charProgressBars button');
+      bars.forEach((bar, i) => {
+        bar.className = i === currentChar
+          ? 'h-1 rounded-full transition-all duration-300 bg-white w-12'
+          : 'h-1 rounded-full transition-all duration-300 bg-white/30 w-8';
+      });
+    }
+
+    let charAutoTimer = null;
+    function startCharAutoPlay() {
+      clearInterval(charAutoTimer);
+      charAutoTimer = setInterval(() => { currentChar = (currentChar + 1) % characters.length; updateCharacter('left'); }, 5000);
+    }
+
+    function nextCharacter() {
+      currentChar = (currentChar + 1) % characters.length;
+      updateCharacter('left');
+      startCharAutoPlay();
+    }
+
+    function prevCharacter() {
+      currentChar = (currentChar - 1 + characters.length) % characters.length;
+      updateCharacter('right');
+      startCharAutoPlay();
+    }
+
+    function goToCharacter(index) {
+      const dir = index > currentChar ? 'left' : 'right';
+      currentChar = index;
+      updateCharacter(dir);
+      startCharAutoPlay();
+    }
+
+    startCharAutoPlay();
+
+    // Swipe/drag support on character carousel
+    (function() {
+      const mediaContainer = document.getElementById('characterMediaContainer');
+      const charSection = mediaContainer?.closest('.flex-col, .md\\:flex-row')?.parentElement;
+      const targets = [mediaContainer, charSection].filter(Boolean);
+
+      let startX = 0, startY = 0, tracking = false;
+
+      targets.forEach(el => {
+        // Touch swipe (mobile)
+        el.addEventListener('touchstart', e => {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          tracking = true;
+        }, { passive: true });
+
+        el.addEventListener('touchend', e => {
+          if (!tracking) return;
+          tracking = false;
+          const dx = e.changedTouches[0].clientX - startX;
+          const dy = e.changedTouches[0].clientY - startY;
+          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            if (dx < 0) nextCharacter();
+            else prevCharacter();
+          }
+        }, { passive: true });
+
+        // Mouse drag (desktop)
+        let mouseDown = false, mouseStartX = 0;
+        el.addEventListener('mousedown', e => {
+          mouseDown = true;
+          mouseStartX = e.clientX;
+          el.style.cursor = 'grabbing';
+        });
+        el.addEventListener('mouseup', e => {
+          if (!mouseDown) return;
+          mouseDown = false;
+          el.style.cursor = '';
+          const dx = e.clientX - mouseStartX;
+          if (Math.abs(dx) > 50) {
+            if (dx < 0) nextCharacter();
+            else prevCharacter();
+          }
+        });
+        el.addEventListener('mouseleave', () => { mouseDown = false; el.style.cursor = ''; });
+      });
+    })();
+
+    // AI glow random pulse
+    const aiGlow = document.querySelector('.ai-pulse');
+    if (aiGlow) {
+      function pulseAI() {
+        const opacity = 0.4 + Math.random() * 0.6;
+        const duration = 200 + Math.random() * 800;
+        const pause = 100 + Math.random() * 600;
+        aiGlow.style.transition = `opacity ${duration}ms ease`;
+        aiGlow.style.opacity = opacity;
+        setTimeout(() => {
+          const dimTo = Math.random() * 0.15;
+          const dimDur = 300 + Math.random() * 700;
+          aiGlow.style.transition = `opacity ${dimDur}ms ease`;
+          aiGlow.style.opacity = dimTo;
+          setTimeout(pulseAI, dimDur + pause);
+        }, duration + pause);
+      }
+      pulseAI();
+    }
+
+    // Game Mode switcher
+    const gameModes = [
+      { name: 'Bang Bang Mahjong', desc: "Fast. Loud. No time to think. That's the point.", img: 'img/tablephone1.webp' },
+      { name: 'Riichi Mahjong', desc: "Looks simple. It's not. Welcome to the deep end.", img: 'img/tablephone2.webp' }
+    ];
+    let currentGameMode = 0;
+
+    function updateGameMode() {
+      const m = gameModes[currentGameMode];
+      const img = document.getElementById('gameModeImg');
+      const name = document.getElementById('gameModeName');
+      const desc = document.getElementById('gameModeDesc');
+
+      img.classList.remove('char-img-active'); img.classList.add('char-img-enter');
+      [name, desc].forEach(el => { el.classList.remove('char-fade-active'); el.classList.add('char-fade-enter'); });
+
+      setTimeout(() => {
+        img.src = m.img;
+        name.textContent = m.name;
+        desc.textContent = m.desc;
+        requestAnimationFrame(() => {
+          img.classList.remove('char-img-enter'); img.classList.add('char-img-active');
+          [name, desc].forEach((el, i) => {
+            el.classList.remove('char-fade-enter'); el.classList.add('char-fade-active');
+            el.style.transitionDelay = `${i * 0.1}s`;
+          });
+        });
+      }, 300);
+
+      const dots = document.querySelectorAll('#gameModeDots button');
+      dots.forEach((d, i) => {
+        d.className = i === currentGameMode
+          ? 'w-2.5 h-2.5 rounded-full bg-white transition-all duration-300'
+          : 'w-2.5 h-2.5 rounded-full bg-white/30 transition-all duration-300';
+      });
+    }
+
+    let gameModeAutoTimer = null;
+    function startGameModeAutoPlay() {
+      clearInterval(gameModeAutoTimer);
+      gameModeAutoTimer = setInterval(() => { currentGameMode = (currentGameMode + 1) % gameModes.length; updateGameMode(); }, 4000);
+    }
+
+    function nextGameMode() { currentGameMode = (currentGameMode + 1) % gameModes.length; updateGameMode(); startGameModeAutoPlay(); }
+    function prevGameMode() { currentGameMode = (currentGameMode - 1 + gameModes.length) % gameModes.length; updateGameMode(); startGameModeAutoPlay(); }
+    function goToGameMode(i) { currentGameMode = i; updateGameMode(); startGameModeAutoPlay(); }
+
+    startGameModeAutoPlay();
+
+    // Mobile feature carousel dots
+    const featureCarousel = document.getElementById('featureCarousel');
+    if (featureCarousel) {
+      featureCarousel.addEventListener('scroll', () => {
+        const scrollLeft = featureCarousel.scrollLeft;
+        const cardWidth = featureCarousel.querySelector('.feature-card')?.offsetWidth || 300;
+        const gap = 16;
+        const index = Math.round(scrollLeft / (cardWidth + gap));
+        const dots = document.querySelectorAll('#featureDots button');
+        dots.forEach((d, i) => {
+          d.className = i === index
+            ? 'w-3 h-3 rounded-full bg-white transition-all'
+            : 'w-3 h-3 rounded-full bg-white/40 transition-all';
+        });
+      });
+    }
+
+    function goToFeature(index) {
+      const carousel = document.getElementById('featureCarousel');
+      const card = carousel?.querySelector('.feature-card');
+      if (carousel && card) {
+        const cardWidth = card.offsetWidth + 16;
+        carousel.scrollTo({ left: index * cardWidth, behavior: 'smooth' });
+      }
+    }
+
+    // Random phone light pulse
+    const phoneLight = document.querySelector('.phone-light-pulse');
+    if (phoneLight) {
+      function pulseLight() {
+        const opacity = 0.3 + Math.random() * 0.7; // 0.3 to 1.0
+        const duration = 300 + Math.random() * 1200; // 300ms to 1500ms
+        const pause = 200 + Math.random() * 800; // 200ms to 1000ms
+        phoneLight.style.transition = `opacity ${duration}ms ease`;
+        phoneLight.style.opacity = opacity;
+        setTimeout(() => {
+          const dimTo = Math.random() * 0.25; // dim to 0–0.25
+          const dimDuration = 400 + Math.random() * 1000;
+          phoneLight.style.transition = `opacity ${dimDuration}ms ease`;
+          phoneLight.style.opacity = dimTo;
+          setTimeout(pulseLight, dimDuration + pause);
+        }, duration + pause);
+      }
+      pulseLight();
+    }
+
+    // Start cat float after intro animation finishes (~1.9s)
+    setTimeout(() => {
+      const cat = document.getElementById('heroCat');
+      if (cat) cat.classList.add('cat-float-active');
+    }, 2000);
+
+    // Cat flips horizontally to follow cursor direction
+    (function initCatFlip() {
+      const catImg = document.getElementById('heroCatImg');
+      const catDiv = document.getElementById('heroCat');
+      if (!catImg || !catDiv) return;
+      document.addEventListener('mousemove', e => {
+        const catRect = catDiv.getBoundingClientRect();
+        const catCenterX = catRect.left + catRect.width / 2;
+        // Flip cat to face toward the cursor
+        if (e.clientX < catCenterX) {
+          catImg.style.transform = 'scaleX(-1)';
+        } else {
+          catImg.style.transform = 'scaleX(1)';
+        }
+      }, { passive: true });
+    })();
+
+    // Parallax scroll effect
+    const heroSection = document.querySelector('#hero section');
+    const parallaxLayers = document.querySelectorAll('.parallax-layer');
+
+    window.addEventListener('scroll', () => {
+      const scrollY = window.scrollY;
+      const heroHeight = heroSection?.offsetHeight || 900;
+
+      // Only apply parallax when hero is in view
+      if (scrollY < heroHeight * 1.2) {
+        parallaxLayers.forEach(layer => {
+          const speed = parseFloat(layer.dataset.speed) || 0.2;
+          const yOffset = scrollY * speed;
+          layer.style.transform = `translateY(${yOffset}px)`;
+        });
+      }
+    }, { passive: true });
+
+    // Scroll reveal with Intersection Observer
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale').forEach(el => {
+      revealObserver.observe(el);
+    });
+
+    // ===== Hero: mobile = looping video, desktop = cursor scrub =====
+    const heroCanvas = document.getElementById('heroCharCanvas');
+    const heroVideo = document.getElementById('heroCharVideo');
+
+    if (isMobile && heroVideo && useVideos) {
+      // ── MOBILE: show looping video, hide canvas ──
+      if (heroCanvas) heroCanvas.style.display = 'none';
+      heroVideo.style.display = 'block';
+      heroVideo.play().catch(() => {});
+      // Reveal immediately on mobile (no tile explosion intro on touch devices)
+      document.querySelectorAll('.hero-intro-hidden').forEach(el => {
+        el.classList.add('hero-revealed');
+      });
+    } else if (!heroCanvas || !useVideos) {
+      // No video scrub — reveal hero content immediately
+      if (heroVideo) heroVideo.style.display = 'none';
+      document.querySelectorAll('.hero-intro-hidden').forEach(el => {
+        el.classList.add('hero-revealed');
+      });
+    }
+    if (!isMobile && heroCanvas && useVideos) {
+      const heroCtx = heroCanvas.getContext('2d');
+      const heroFrames = [];  // ImageBitmap array — instant draw, no flicker
+      let heroReady = false;
+      let heroCurrentIdx = 0;
+
+      const offV = document.createElement('video');
+      offV.muted = true;
+      offV.playsInline = true;
+      offV.preload = 'auto';
+      const s1 = document.createElement('source');
+      s1.src = 'video/characters_hero.mp4'; s1.type = 'video/mp4; codecs="hvc1"';
+      offV.appendChild(s1);
+      const s2 = document.createElement('source');
+      s2.src = 'video/characters_hero.webm'; s2.type = 'video/webm';
+      offV.appendChild(s2);
+      offV.load();
+
+      // Capture frames using requestVideoFrameCallback (ordered, reliable)
+      function startCapture() {
+        const w = offV.videoWidth;
+        const h = offV.videoHeight;
+        heroCanvas.width = w;
+        heroCanvas.height = h;
+
+        const tmp = document.createElement('canvas');
+        tmp.width = w; tmp.height = h;
+        const tCtx = tmp.getContext('2d');
+        let firstDrawn = false;
+
+        function grab() {
+          tCtx.clearRect(0, 0, w, h);
+          tCtx.drawImage(offV, 0, 0);
+
+          // createImageBitmap is fast & synchronous-draw later
+          createImageBitmap(tmp).then(bmp => {
+            heroFrames.push(bmp);
+            if (!firstDrawn) {
+              heroCtx.drawImage(bmp, 0, 0);
+              firstDrawn = true;
+            }
+          });
+        }
+
+        if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
+          function onFrame() {
+            grab();
+            if (!offV.ended) offV.requestVideoFrameCallback(onFrame);
+          }
+          offV.requestVideoFrameCallback(onFrame);
+        } else {
+          // Fallback: timeupdate
+          let lastT = -1;
+          offV.addEventListener('timeupdate', () => {
+            if (offV.currentTime !== lastT) { lastT = offV.currentTime; grab(); }
+          });
+        }
+
+        offV.play();
+        offV.addEventListener('ended', () => {
+          // Wait for async createImageBitmap calls to finish
+          setTimeout(() => {
+            if (heroFrames.length > 0) {
+              heroCurrentIdx = 0;
+              heroCtx.drawImage(heroFrames[0], 0, 0);
+              heroReady = true;
+              console.log('Hero scrub ready:', heroFrames.length, 'frames');
+            }
+          }, 500);
+        });
+      }
+
+      if (offV.readyState >= 3) startCapture();
+      else offV.addEventListener('canplay', () => startCapture(), { once: true });
+
+      // Safety: reveal hero content after 5s even if tile explosion hasn't triggered
+      setTimeout(() => {
+        document.querySelectorAll('.hero-intro-hidden').forEach(el => {
+          el.classList.add('hero-revealed');
+        });
+      }, 5000);
+
+      // ── Segment definitions (frame indices at 24fps, 577 frames total) ──
+      const SEGS = {
+        right: { center: 0,   extreme: 128, returnEnd: 166 },
+        left:  { center: 166, extreme: 247, returnEnd: 289 },
+        up:    { center: 319, extreme: 387, returnEnd: 436 },
+        down:  { center: 436, extreme: 531, returnEnd: 576 }
+      };
+      const CENTER_FRAMES = [0, 166, 289, 319, 436];
+
+      let _rawX = 0.5, _rawY = 0.5;
+      let _smoothX = 0.5, _smoothY = 0.5;
+      let _activeSeg = null;
+      let _targetIdx = 0;
+      let _returning = false;
+      let _lastFrameTime = 0;
+
+      // Hero element for relative cursor mapping
+      const heroSection = document.querySelector('#hero section');
+
+      const INPUT_LERP = 0.07;
+      const FRAME_MS = 1000 / 24;
+
+      // Zone layout (hero-relative 0-1 coords):
+      //        [  UP   ] (y < 0.3, x in center)
+      //  [LEFT][ center][RIGHT]
+      //        [ DOWN  ] (y > 0.7, x in center)
+      //
+      // Sides win if cursor is in the left/right thirds, regardless of Y.
+      // Up/Down only trigger in the middle third horizontally.
+      const SIDE_EDGE = 0.3;   // x < 0.3 = left zone, x > 0.7 = right zone
+      const VERT_EDGE = 0.3;   // y < 0.3 = up zone, y > 0.7 = down zone
+      const CENTER_DZ = 0.08;  // dead zone radius around exact center
+
+      function getDirection(rx, ry) {
+        const dx = rx - 0.5, dy = ry - 0.5;
+        // Dead zone: very close to center = no direction
+        if (Math.abs(dx) < CENTER_DZ && Math.abs(dy) < CENTER_DZ) return null;
+
+        // Extreme top/bottom wins over sides (prevents "up never triggers" at corners)
+        const EXTREME_VERT = 0.15;
+        if (ry < EXTREME_VERT) return 'up';
+        if (ry > (1 - EXTREME_VERT)) return 'down';
+
+        // Sides win in their thirds
+        if (rx < SIDE_EDGE) return 'left';
+        if (rx > (1 - SIDE_EDGE)) return 'right';
+
+        // Middle third: check up/down
+        if (ry < VERT_EDGE) return 'up';
+        if (ry > (1 - VERT_EDGE)) return 'down';
+
+        // In the center area but not in dead zone — use dominant axis
+        if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 'right' : 'left';
+        return dy < 0 ? 'up' : 'down';
+      }
+
+      function getProgress(rx, ry) {
+        const dir = getDirection(rx, ry);
+        if (!dir) return 0;
+
+        // Progress based on how far into the zone
+        if (dir === 'left')  return Math.min(1, (SIDE_EDGE - rx) / SIDE_EDGE);          // 0 at edge, 1 at x=0
+        if (dir === 'right') return Math.min(1, (rx - (1 - SIDE_EDGE)) / SIDE_EDGE);    // 0 at edge, 1 at x=1
+        if (dir === 'up')    return Math.min(1, (VERT_EDGE - ry) / VERT_EDGE);           // 0 at edge, 1 at y=0
+        if (dir === 'down')  return Math.min(1, (ry - (1 - VERT_EDGE)) / VERT_EDGE);    // 0 at edge, 1 at y=1
+
+        return 0;
+      }
+
+      // Convert mouse event to hero-relative 0-1 coords (center = 0.5, 0.5)
+      function heroRelative(e) {
+        if (!heroSection) return { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight };
+        const r = heroSection.getBoundingClientRect();
+        return {
+          x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)),
+          y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))
+        };
+      }
+
+      function clampFrame(i) {
+        return Math.max(0, Math.min(heroFrames.length - 1, i));
+      }
+
+      function nearestCenter(idx) {
+        let best = CENTER_FRAMES[0], bestD = Math.abs(idx - best);
+        for (let i = 1; i < CENTER_FRAMES.length; i++) {
+          const d = Math.abs(idx - CENTER_FRAMES[i]);
+          if (d < bestD) { bestD = d; best = CENTER_FRAMES[i]; }
+        }
+        return best;
+      }
+
+      function drawIdx(i) {
+        i = clampFrame(i);
+        if (i === heroCurrentIdx) return;
+        heroCurrentIdx = i;
+        heroCtx.clearRect(0, 0, heroCanvas.width, heroCanvas.height);
+        heroCtx.drawImage(heroFrames[i], 0, 0);
+      }
+
+      // --- Input handlers (hero-section-relative) ---
+      document.addEventListener('mousemove', (e) => {
+        const p = heroRelative(e);
+        _rawX = p.x;
+        _rawY = p.y;
+      }, { passive: true });
+
+      document.addEventListener('touchmove', (e) => {
+        if (e.touches[0]) {
+          const p = heroRelative(e.touches[0]);
+          _rawX = p.x;
+          _rawY = p.y;
+        }
+      }, { passive: true });
+
+      window.addEventListener('deviceorientation', (e) => {
+        if (e.gamma === null) return;
+        const rx = Math.max(-45, Math.min(45, e.gamma));
+        const ry = e.beta !== null ? Math.max(-45, Math.min(45, e.beta - 45)) : 0;
+        _rawX = (rx + 45) / 90;
+        _rawY = (ry + 45) / 90;
+      }, { passive: true });
+
+      // --- Main scrub loop ---
+      (function scrubLoop(ts) {
+        requestAnimationFrame(scrubLoop);
+        // Work progressively — scrub with whatever frames are captured so far
+        if (heroFrames.length < 10) return;
+
+        _smoothX += (_rawX - _smoothX) * INPUT_LERP;
+        _smoothY += (_rawY - _smoothY) * INPUT_LERP;
+
+        // Direction uses RAW coords for instant response (no lag when switching zones)
+        // Progress uses SMOOTHED coords for fluid frame stepping
+        const dir = getDirection(_rawX, _rawY);
+        const progress = getProgress(_smoothX, _smoothY);
+
+        if (dir !== null) {
+          const seg = SEGS[dir];
+
+          // New direction — snap to segment center (identical pose, invisible jump)
+          if (!_activeSeg || _activeSeg !== seg) {
+            _activeSeg = seg;
+            _returning = false;
+            drawIdx(seg.center);
+          }
+
+          // Map cursor distance → target frame
+          const range = seg.extreme - seg.center;
+          _targetIdx = clampFrame(seg.center + Math.round(progress * range));
+          _returning = false;
+
+        } else if (_activeSeg && !_returning) {
+          _returning = true;
+          _targetIdx = clampFrame(_activeSeg.returnEnd);
+        }
+
+        // Step frames at 24fps
+        if (ts - _lastFrameTime < FRAME_MS) return;
+        if (heroCurrentIdx === _targetIdx) {
+          if (_returning) {
+            drawIdx(nearestCenter(heroCurrentIdx));
+            _activeSeg = null;
+            _returning = false;
+          }
+          return;
+        }
+        _lastFrameTime = ts;
+
+        // Step toward target: 1 frame normally, 2 during returns
+        const diff = _targetIdx - heroCurrentIdx;
+        const maxStep = _returning ? 2 : 1;
+        const step = Math.sign(diff) * Math.min(maxStep, Math.abs(diff));
+        drawIdx(heroCurrentIdx + step);
+      })(0);
+    }
+
+    // ===== Cat video lazy playback =====
+    const catVideo = document.getElementById('catVideo');
+    if (catVideo) {
+      // Pause initially if not in viewport
+      const catObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            catVideo.play().catch(() => {});
+          } else {
+            catVideo.pause();
+          }
+        });
+      }, { threshold: 0.1 });
+      catObserver.observe(catVideo);
+    }
+
+    // ===== Reduced motion: pause all autoplay videos =====
+    if (!useVideos) {
+      document.querySelectorAll('video[autoplay]').forEach(v => {
+        v.pause();
+        v.removeAttribute('autoplay');
+      });
+      // Hero stays as static PNG (scrub skipped above)
+    }
+
+    // ===== Shared: Mahjong tile GLB loader + texture factories =====
+    const MahjongTile = (function() {
+      if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined') return null;
+
+      let _tileTemplate = null;
+      const _readyCallbacks = [];
+
+      // Load tile.glb once, then fire all waiting callbacks
+      const loader = new THREE.GLTFLoader();
+      loader.load('img/tile.glb', (gltf) => {
+        _tileTemplate = gltf.scene;
+        _readyCallbacks.forEach(cb => cb());
+        _readyCallbacks.length = 0;
+      });
+
+      function onReady(cb) {
+        if (_tileTemplate) cb();
+        else _readyCallbacks.push(cb);
+      }
+
+      // Preload tile face images
+      const _texLoader = new THREE.TextureLoader();
+      const _texCache = {};
+      function loadFaceTex(imgPath, renderer) {
+        if (_texCache[imgPath]) return _texCache[imgPath];
+        const tex = _texLoader.load(imgPath);
+        tex.flipY = false; // glTF models expect non-flipped textures
+        tex.encoding = THREE.sRGBEncoding;
+        if (renderer) tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        _texCache[imgPath] = tex;
+        return tex;
+      }
+
+      // Clone the GLB model, apply tile face image texture
+      function createTile(renderer, faceImage, opts) {
+        opts = opts || {};
+        const clone = _tileTemplate.clone(true);
+
+        // Compute world-space bounding box (accounts for nested scale 272 + rotation)
+        const box = new THREE.Box3().setFromObject(clone);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+
+        // Normalize: scale so height = 1 unit
+        const targetH = 1.0;
+        const s = targetH / size.y;
+        clone.scale.multiplyScalar(s);
+
+        // Wrapper group: offset clone so bounding-box center is at origin
+        const wrapper = new THREE.Group();
+        clone.position.set(-center.x * s, -center.y * s, -center.z * s);
+        wrapper.add(clone);
+
+        // Apply materials
+        clone.traverse(child => {
+          if (!child.isMesh) return;
+
+          if (child.material.name === 'Front_material') {
+            // Load tile face image and apply as texture
+            const faceTex = loadFaceTex(faceImage, renderer);
+            child.material = new THREE.MeshPhysicalMaterial({
+              map: faceTex,
+              roughness: opts.faceRoughness !== undefined ? opts.faceRoughness : 0.12,
+              metalness: 0.02,
+              clearcoat: opts.faceClearcoat !== undefined ? opts.faceClearcoat : 0.5,
+              clearcoatRoughness: opts.faceClearcoatRoughness !== undefined ? opts.faceClearcoatRoughness : 0.2,
+              transparent: !!opts.transparent,
+              opacity: opts.opacity !== undefined ? opts.opacity : 1.0,
+              emissive: opts.faceEmissive !== undefined ? opts.faceEmissive : 0x000000,
+              emissiveIntensity: opts.faceEmissiveIntensity !== undefined ? opts.faceEmissiveIntensity : 0
+            });
+
+          } else if (child.material.name === 'Back_material') {
+            child.material = new THREE.MeshPhysicalMaterial({
+              color: opts.backColor !== undefined ? opts.backColor : 0xce3300,
+              roughness: opts.backRoughness !== undefined ? opts.backRoughness : 0.24,
+              metalness: 0.0,
+              clearcoat: opts.backClearcoat !== undefined ? opts.backClearcoat : 0.3,
+              clearcoatRoughness: 0.3,
+              transparent: !!opts.transparent,
+              opacity: opts.opacity !== undefined ? opts.opacity : 1.0,
+              emissive: opts.backEmissive !== undefined ? opts.backEmissive : 0x000000,
+              emissiveIntensity: opts.backEmissiveIntensity !== undefined ? opts.backEmissiveIntensity : 0
+            });
+          }
+        });
+
+        return wrapper;
+      }
+
+      return { onReady, createTile };
+    })();
+
+    // ===== 3D Floating Background Tiles (separate canvas, behind characters) =====
+    (function initBgTiles() {
+      if (!MahjongTile || prefersReducedMotion) return;
+
+      const bgCanvas = document.getElementById('bgTilesCanvas');
+      const heroEl = document.querySelector('#hero section');
+      if (!bgCanvas || !heroEl) return;
+
+      MahjongTile.onReady(function() {
+        const rect = heroEl.getBoundingClientRect();
+        const R = new THREE.WebGLRenderer({ canvas: bgCanvas, alpha: true, antialias: true });
+        R.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        R.setSize(rect.width, rect.height);
+        R.setClearColor(0x000000, 0);
+        R.toneMapping = THREE.ACESFilmicToneMapping;
+        R.toneMappingExposure = 1.1;
+
+        const scene = new THREE.Scene();
+        const cam = new THREE.PerspectiveCamera(45, rect.width / rect.height, 0.1, 100);
+        cam.position.z = 8;
+
+        // --- 3-point lighting ---
+        scene.add(new THREE.AmbientLight(0xfff0e0, 0.3));
+        const key = new THREE.DirectionalLight(0xfff8ee, 0.7);
+        key.position.set(3, 4, 6); scene.add(key);
+        const fill = new THREE.DirectionalLight(0xffeedd, 0.25);
+        fill.position.set(-4, -1, 4); scene.add(fill);
+        const rim = new THREE.PointLight(0xff7733, 1.0, 20);
+        rim.position.set(0, 1, -4); scene.add(rim);
+
+        // Tile face images
+        const tileImages = [
+          'img/tiles/dragon.jpg',
+          'img/tiles/greendragon.jpg',
+          'img/tiles/bamboo.jpg',
+          'img/tiles/dot.jpg',
+          'img/tiles/5dots.jpg',
+          'img/tiles/typecharac.jpg',
+        ];
+
+        // 6 tiles — flanking characters, pushed wider for GLB model
+        const desktopConfigs = [
+          { x: -5.2, y: 0.8, z: -3.5, s: 0.72, img: 0 },
+          { x: -4.6, y: -0.8, z: -4.0, s: 0.62, img: 1 },
+          { x: 5.0,  y: 0.6, z: -3.5, s: 0.68, img: 2 },
+          { x: 4.4,  y: -1.5, z: -4.2, s: 0.58, img: 3 },
+          { x: -3.6, y: 2.5, z: -3.8, s: 0.55, img: 4 },
+          { x: 3.8,  y: 2.5, z: -3.8, s: 0.52, img: 5 },
+        ];
+        // Mobile: tiles closer in so they're visible in viewport
+        const mobileConfigs = [
+          { x: -2.8, y: 0.5, z: -3.5, s: 0.57, img: 0 },
+          { x: -2.4, y: -0.6, z: -4.0, s: 0.50, img: 1 },
+          { x: 2.6,  y: 0.4, z: -3.5, s: 0.55, img: 2 },
+          { x: 2.2,  y: -1.0, z: -4.2, s: 0.46, img: 3 },
+          { x: -1.8, y: 1.8, z: -3.8, s: 0.44, img: 4 },
+          { x: 2.0,  y: 1.8, z: -3.8, s: 0.42, img: 5 },
+        ];
+        const configs = isMobile ? mobileConfigs : desktopConfigs;
+
+        const tiles = [];
+
+        // ── Firework explosion origin ──
+        const ORIGIN = { x: 0, y: 0.3, z: -1.5 };
+
+        // Each tile gets a fixed orbit slot so they never overlap during gather.
+        // 6 tiles evenly spaced around an ellipse, alternating depth.
+        const ORBIT_RADIUS = 2.2;   // wider ring = no overlap
+        const ORBIT_RATIO = 0.55;  // vertical squash for oval
+
+        configs.forEach((cfg, idx) => {
+          const tile = MahjongTile.createTile(R, tileImages[cfg.img], {
+            transparent: true, opacity: 0.38,
+            faceRoughness: 0.12, faceClearcoat: 0.5, faceClearcoatRoughness: 0.2,
+            faceEmissive: 0x553311, faceEmissiveIntensity: 0.22,
+            backEmissive: 0x442200, backEmissiveIntensity: 0.2
+          });
+
+          const finalScale = cfg.s;
+          const introScale = finalScale * 1.7;
+          tile.scale.multiplyScalar(introScale);
+
+          // Orbit slot angle for this tile (evenly spaced)
+          const slotAngle = (idx / configs.length) * Math.PI * 2;
+
+          // Start at orbit slot around origin
+          tile.position.set(
+            ORIGIN.x + Math.cos(slotAngle) * ORBIT_RADIUS,
+            ORIGIN.y + Math.sin(slotAngle) * ORBIT_RADIUS * ORBIT_RATIO,
+            ORIGIN.z + (idx % 2 === 0 ? 0.5 : -0.5)
+          );
+          tile.rotation.set(
+            (Math.random() - 0.5) * 0.7,
+            (Math.random() - 0.5) * 0.5,
+            (Math.random() - 0.5) * 0.25
+          );
+          tile.traverse(child => {
+            if (child.isMesh && child.material) child.material.opacity = 1.0;
+          });
+          scene.add(tile);
+
+          const axis = new THREE.Vector3(
+            Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5
+          ).normalize();
+
+          tiles.push({
+            mesh: tile, axis,
+            slotAngle,
+            // Final resting position (spread wide)
+            bx: cfg.x, by: cfg.y, bz: cfg.z,
+            introScale, finalScale,
+            fx: 0.12 + Math.random() * 0.16, fy: 0.16 + Math.random() * 0.2, fz: 0.08 + Math.random() * 0.1,
+            ax: 0.08 + Math.random() * 0.12, ay: 0.1 + Math.random() * 0.18, az: 0.03 + Math.random() * 0.04,
+            p: Math.random() * Math.PI * 2,
+            rotSpeed: 0.12 + Math.random() * 0.15,
+            tumbleSpeed: 0.04 + Math.random() * 0.06,
+            tumbleAmp: 0.3 + Math.random() * 0.35,
+          });
+        });
+
+        // ── Firework timing (slower, more cinematic) — DESKTOP ONLY ──
+        const bgTilesLayer = document.getElementById('bgTilesLayer');
+        const skipIntro = isMobile; // Mobile: no explosion, tiles start at final positions
+
+        // Mobile orbit config
+        const MOBILE_ORBIT_RADIUS = 3.2;
+        const MOBILE_ORBIT_RATIO = 0.7;
+        const MOBILE_ORBIT_SPEED = 0.25; // slow, ambient rotation
+        const MOBILE_ORBIT_CENTER = { x: 0, y: 0.8, z: -3.5 };
+
+        if (skipIntro) {
+          // Mobile: put tiles at orbit positions immediately, z behind characters
+          tiles.forEach(tl => {
+            tl.mesh.scale.setScalar(tl.finalScale);
+            tl.mesh.traverse(child => {
+              if (child.isMesh && child.material) child.material.opacity = 0.38;
+            });
+          });
+          if (bgTilesLayer) bgTilesLayer.style.zIndex = '1';
+        }
+
+        // Phase 1: GATHER — tiles orbit at center, spinning (0 → HOLD_END)
+        // Phase 2: BANG  — explosive burst outward (HOLD_END → +BURST_DUR)
+        // Phase 3: SETTLE + REVEAL — tiles ease to final, characters fade in
+        const HOLD_DURATION = 1.6;
+        const BURST_DURATION = 1.2;
+        const SETTLE_DURATION = 0.8;
+        const TOTAL_EXPLODE = BURST_DURATION + SETTLE_DURATION;
+        const REVEAL_AT = HOLD_DURATION + BURST_DURATION * 0.35;
+        const DROP_Z_AT = HOLD_DURATION + 0.12;
+        let heroRevealed = skipIntro; // Already revealed on mobile
+        let tilesDropped = skipIntro;
+        const animStart = performance.now() / 1000;
+
+        function revealHeroContent() {
+          if (heroRevealed) return;
+          heroRevealed = true;
+          document.querySelectorAll('.hero-intro-hidden').forEach(el => {
+            el.classList.add('hero-revealed');
+          });
+        }
+
+        function dropTilesBehind() {
+          if (tilesDropped) return;
+          tilesDropped = true;
+          if (bgTilesLayer) bgTilesLayer.style.zIndex = '1';
+        }
+
+        // Easing functions
+        function easeOutExpo(x) { return x === 1 ? 1 : 1 - Math.pow(2, -10 * x); }
+        function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
+        function easeInOutQuad(x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
+
+        // Mouse parallax
+        let mx = 0, my = 0;
+        document.addEventListener('mousemove', e => {
+          mx = (e.clientX / window.innerWidth) * 2 - 1;
+          my = -(e.clientY / window.innerHeight) * 2 + 1;
+        }, { passive: true });
+
+        // Visibility
+        let visible = true;
+        const obs = new IntersectionObserver(e => { visible = e[0].isIntersecting; }, { threshold: 0.05 });
+        obs.observe(heroEl);
+
+        // Animation
+        const clock = new THREE.Clock();
+        (function loop() {
+          requestAnimationFrame(loop);
+          if (!visible) return;
+          const dt = clock.getDelta();
+          const t = clock.getElapsedTime();
+          const now = performance.now() / 1000;
+          const elapsed = now - animStart;
+
+          // Drop tiles behind characters very early in the burst
+          if (elapsed >= DROP_Z_AT && !tilesDropped) {
+            dropTilesBehind();
+          }
+
+          // Reveal hero content
+          if (elapsed >= REVEAL_AT && !heroRevealed) {
+            revealHeroContent();
+          }
+
+          tiles.forEach(tl => {
+            const p = tl.p;
+
+            if (skipIntro) {
+              // ── MOBILE: continuous slow orbit around characters ──
+              const angle = tl.slotAngle + t * MOBILE_ORBIT_SPEED;
+              const bobY = Math.sin(t * 0.5 + p) * 0.15;
+              const bobZ = Math.cos(t * 0.3 + p * 0.7) * 0.1;
+              tl.mesh.position.x = MOBILE_ORBIT_CENTER.x + Math.cos(angle) * MOBILE_ORBIT_RADIUS;
+              tl.mesh.position.y = MOBILE_ORBIT_CENTER.y + Math.sin(angle) * MOBILE_ORBIT_RADIUS * MOBILE_ORBIT_RATIO + bobY;
+              tl.mesh.position.z = MOBILE_ORBIT_CENTER.z + bobZ + (tl.slotAngle % 2 === 0 ? 0.3 : -0.3);
+              tl.mesh.rotateOnAxis(tl.axis, tl.rotSpeed * dt);
+              tl.mesh.rotation.x += Math.sin(t * tl.tumbleSpeed * 10 + p) * tl.tumbleAmp * dt;
+              tl.mesh.rotation.z += Math.cos(t * tl.tumbleSpeed * 8 + p * 1.5) * tl.tumbleAmp * 0.5 * dt;
+
+            } else if (elapsed >= HOLD_DURATION + TOTAL_EXPLODE) {
+              // ── DESKTOP STEADY STATE: gentle floating after intro ──
+              tl.mesh.position.x = tl.bx + Math.sin(t * tl.fx + p) * tl.ax + mx * 0.1;
+              tl.mesh.position.y = tl.by + Math.cos(t * tl.fy + p * 1.3) * tl.ay + my * 0.06;
+              tl.mesh.position.z = tl.bz + Math.sin(t * tl.fz + p * 0.7) * tl.az;
+              tl.mesh.rotateOnAxis(tl.axis, tl.rotSpeed * dt);
+              tl.mesh.rotation.x += Math.sin(t * tl.tumbleSpeed * 10 + p) * tl.tumbleAmp * dt;
+              tl.mesh.rotation.z += Math.cos(t * tl.tumbleSpeed * 8 + p * 1.5) * tl.tumbleAmp * 0.5 * dt;
+
+            } else if (elapsed < HOLD_DURATION) {
+              // ── PHASE 1: GATHER — tiles orbit in formation (DESKTOP ONLY) ──
+              const orbitSpeed = 0.6;
+              const currentAngle = tl.slotAngle + t * orbitSpeed;
+              tl.mesh.position.set(
+                ORIGIN.x + Math.cos(currentAngle) * ORBIT_RADIUS,
+                ORIGIN.y + Math.sin(currentAngle) * ORBIT_RADIUS * ORBIT_RATIO,
+                ORIGIN.z + (Math.sin(currentAngle * 0.5) * 0.5)
+              );
+              tl.mesh.rotateOnAxis(tl.axis, tl.rotSpeed * 3.5 * dt);
+              tl.mesh.rotation.x += Math.sin(t * 2.0 + p) * 0.3 * dt;
+              tl.mesh.rotation.z += Math.cos(t * 1.6 + p * 1.5) * 0.2 * dt;
+              tl.mesh.scale.setScalar(tl.introScale);
+              tl.mesh.traverse(child => {
+                if (child.isMesh && child.material) child.material.opacity = 1.0;
+              });
+              tl._launchX = tl.mesh.position.x;
+              tl._launchY = tl.mesh.position.y;
+              tl._launchZ = tl.mesh.position.z;
+
+            } else {
+              // ── PHASE 2: FIREWORK BURST (DESKTOP ONLY) ──
+              const burstElapsed = elapsed - HOLD_DURATION;
+              const lx = tl._launchX !== undefined ? tl._launchX : ORIGIN.x;
+              const ly = tl._launchY !== undefined ? tl._launchY : ORIGIN.y;
+              const lz = tl._launchZ !== undefined ? tl._launchZ : ORIGIN.z;
+
+              const posProgress = Math.min(1, burstElapsed / BURST_DURATION);
+              const posEase = easeOutExpo(posProgress);
+              const overshoot = 1.15;
+              const settleProgress = Math.min(1, Math.max(0, (burstElapsed - BURST_DURATION) / SETTLE_DURATION));
+              const settleEase = easeOutCubic(settleProgress);
+
+              const posMul = burstElapsed < BURST_DURATION
+                ? posEase * overshoot
+                : overshoot + (1.0 - overshoot) * settleEase;
+
+              const cx = lx + (tl.bx - lx) * posMul;
+              const cy = ly + (tl.by - ly) * posMul;
+              const cz = lz + (tl.bz - lz) * posMul;
+
+              const floatIn = easeOutCubic(Math.min(1, burstElapsed / TOTAL_EXPLODE));
+              tl.mesh.position.x = cx + Math.sin(t * tl.fx + p) * tl.ax * floatIn + mx * 0.1 * floatIn;
+              tl.mesh.position.y = cy + Math.cos(t * tl.fy + p * 1.3) * tl.ay * floatIn + my * 0.06 * floatIn;
+              tl.mesh.position.z = cz + Math.sin(t * tl.fz + p * 0.7) * tl.az * floatIn;
+
+              const scaleDelay = 0.2;
+              const scaleElapsed = Math.max(0, burstElapsed - scaleDelay);
+              const scaleProgress = Math.min(1, scaleElapsed / (TOTAL_EXPLODE - scaleDelay));
+              const scaleEase = easeInOutQuad(scaleProgress);
+              tl.mesh.scale.setScalar(tl.introScale + (tl.finalScale - tl.introScale) * scaleEase);
+
+              const opacityProgress = Math.min(1, burstElapsed / (BURST_DURATION * 0.8));
+              const opacityEase = easeOutExpo(opacityProgress);
+              const currentOpacity = 1.0 + (0.38 - 1.0) * opacityEase;
+              tl.mesh.traverse(child => {
+                if (child.isMesh && child.material) child.material.opacity = currentOpacity;
+              });
+
+              const spinDecay = 1 + (1 - floatIn) * 8;
+              tl.mesh.rotateOnAxis(tl.axis, tl.rotSpeed * spinDecay * dt);
+              tl.mesh.rotation.x += Math.sin(t * tl.tumbleSpeed * 10 + p) * tl.tumbleAmp * dt;
+              tl.mesh.rotation.z += Math.cos(t * tl.tumbleSpeed * 8 + p * 1.5) * tl.tumbleAmp * 0.5 * dt;
+            }
+          });
+
+          R.render(scene, cam);
+        })();
+
+        window.addEventListener('resize', () => {
+          const r = heroEl.getBoundingClientRect();
+          cam.aspect = r.width / r.height;
+          cam.updateProjectionMatrix();
+          R.setSize(r.width, r.height);
+        });
+      }); // end onReady
+    })();
+
+    // ===== 3D WebGL Mahjong Tile Cursor =====
+    (function initTileCursor() {
+      if (typeof THREE === 'undefined' || typeof THREE.GLTFLoader === 'undefined' || prefersReducedMotion || isMobile) return;
+
+      const canvas = document.getElementById('tileCursorCanvas');
+      const heroEl = document.querySelector('#hero section');
+      if (!canvas || !heroEl) return;
+
+      // Load tile_cursor.glb independently (has PLAY NOW baked into back face)
+      const gltfLoader = new THREE.GLTFLoader();
+      gltfLoader.load('img/tile_cursor.glb', (gltf) => {
+        const tileScene = gltf.scene;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000, 0);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.z = 8;
+
+        // --- Normalize tile size ---
+        const box = new THREE.Box3().setFromObject(tileScene);
+        const size = new THREE.Vector3(); box.getSize(size);
+        const center = new THREE.Vector3(); box.getCenter(center);
+        const s = 1.0 / size.y;
+        tileScene.scale.multiplyScalar(s);
+        tileScene.position.set(-center.x * s, -center.y * s, -center.z * s);
+
+        // Wrapper group for positioning + rotation
+        const tileGroup = new THREE.Group();
+        tileGroup.add(tileScene);
+
+        // Default orientation: 0 (no rotation)
+
+        // --- Holy glow sprite behind tile ---
+        const glowC = document.createElement('canvas'); glowC.width = 256; glowC.height = 256;
+        const glowCtx = glowC.getContext('2d');
+        const gg = glowCtx.createRadialGradient(128, 128, 0, 128, 128, 128);
+        gg.addColorStop(0, 'rgba(255,180,80,0.9)');
+        gg.addColorStop(0.15, 'rgba(255,100,20,0.7)');
+        gg.addColorStop(0.35, 'rgba(220,30,0,0.4)');
+        gg.addColorStop(0.6, 'rgba(180,10,0,0.15)');
+        gg.addColorStop(1, 'rgba(100,0,0,0)');
+        glowCtx.fillStyle = gg; glowCtx.fillRect(0, 0, 256, 256);
+
+        const glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: new THREE.CanvasTexture(glowC),
+          blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.85
+        }));
+        glowSprite.scale.set(2.8, 3.4, 1);
+        glowSprite.position.z = -0.2;
+        tileGroup.add(glowSprite);
+        scene.add(tileGroup);
+
+        // --- Lighting (attached to tileGroup so light rotates with the tile) ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+        const keyLight = new THREE.DirectionalLight(0xfff5e0, 0.85);
+        keyLight.position.set(2, -1, 5); tileGroup.add(keyLight);
+        const fillLight = new THREE.DirectionalLight(0xffeedd, 0.3);
+        fillLight.position.set(-2, -1, 4); tileGroup.add(fillLight);
+        const rimLight = new THREE.PointLight(0xff6622, 2.0, 6);
+        rimLight.position.set(0, 0, -1.5); scene.add(rimLight);
+
+        // --- State ---
+        let targetX = 0, targetY = 0, curX = 0, curY = 0, velX = 0, velY = 0;
+        let isInHero = false, isOverCta = false, isInBottomArea = false;
+
+        // Rotation targets: Z=0 default, Z=π/2 + Y=π in bottom area
+        let flipYTarget = 0, rotZTarget = 0;
+
+        document.addEventListener('mousemove', e => {
+          targetX = (e.clientX / window.innerWidth) * 2 - 1;
+          targetY = -(e.clientY / window.innerHeight) * 2 + 1;
+        }, { passive: true });
+
+        tileGroup.visible = false;
+        canvas.style.opacity = '0';
+        canvas.style.transition = 'opacity 0.3s ease';
+
+        heroEl.addEventListener('mouseenter', () => {
+          isInHero = true;
+          if (!isOverCta) { tileGroup.visible = true; canvas.style.opacity = '1'; }
+        });
+        heroEl.addEventListener('mouseleave', () => {
+          isInHero = false;
+          tileGroup.visible = false;
+          canvas.style.opacity = '0';
+        });
+
+        // Bottom area: below 60% of hero height — tile flips to show PLAY NOW
+        // Clicking anywhere in bottom area navigates to game
+        const BOTTOM_THRESHOLD = 0.6;
+        const heroPlayBtn = document.getElementById('heroPlayBtn');
+
+        document.addEventListener('mousemove', (e) => {
+          const heroRect = heroEl.getBoundingClientRect();
+          const relY = (e.clientY - heroRect.top) / heroRect.height;
+          const inBottom = isInHero && relY > BOTTOM_THRESHOLD;
+
+          const el = document.elementFromPoint(e.clientX, e.clientY);
+          const clickable = el && (el.closest('a') || el.closest('button') || el.closest('.nav-btn') || el.closest('.nav-container'));
+
+          if (inBottom) {
+            isInBottomArea = true;
+            isOverCta = false;
+            flipYTarget = Math.PI;
+            rotZTarget = Math.PI / 2;
+            if (heroPlayBtn) heroPlayBtn.style.opacity = '0';
+            if (isInHero) { tileGroup.visible = true; canvas.style.opacity = '1'; }
+          } else if (clickable && !inBottom) {
+            isOverCta = true;
+            isInBottomArea = false;
+            flipYTarget = 0;
+            rotZTarget = 0;
+            if (heroPlayBtn) heroPlayBtn.style.opacity = '1';
+            canvas.style.opacity = '0';
+          } else {
+            isOverCta = false;
+            isInBottomArea = false;
+            flipYTarget = 0;
+            rotZTarget = 0;
+            if (heroPlayBtn) heroPlayBtn.style.opacity = '1';
+            if (isInHero) canvas.style.opacity = '1';
+          }
+        }, { passive: true });
+
+        // Click in bottom area → navigate to game
+        heroEl.addEventListener('click', (e) => {
+          if (!isInBottomArea) return;
+          const el = e.target;
+          if (el.closest('a') || el.closest('button')) return;
+          window.location.href = 'https://game.mstardev.com/';
+        });
+
+        // --- Animation loop ---
+        const clock = new THREE.Clock();
+        const targetQuat = new THREE.Quaternion();
+        const currentQuat = new THREE.Quaternion();
+        const euler = new THREE.Euler();
+
+        (function animate() {
+          requestAnimationFrame(animate);
+          if (!isInHero) return;
+
+          clock.getDelta();
+          const t = clock.getElapsedTime();
+
+          const prevX = curX, prevY = curY;
+          curX += (targetX - curX) * 0.08;
+          curY += (targetY - curY) * 0.08;
+          velX = curX - prevX;
+          velY = curY - prevY;
+          const speed = Math.sqrt(velX * velX + velY * velY);
+
+          // Position: follow cursor with gentle float
+          tileGroup.position.set(
+            curX * 4.5,
+            curY * 2.5 + Math.sin(t * 2.0) * 0.06,
+            0
+          );
+
+          // Rotation: velocity tilt + idle sway + Z rotation (0 default, 90° in bottom) + Y flip (180° in bottom)
+          const tiltX = -velY * 18 + Math.sin(t * 1.1) * 0.08 + Math.sin(t * 0.4) * 0.04;
+          const tiltY = velX * 18 + Math.cos(t * 0.9) * 0.08 + Math.cos(t * 0.35) * 0.04 + flipYTarget;
+          const tiltZ = -velX * 10 + Math.sin(t * 0.7) * 0.05 + rotZTarget;
+
+          euler.set(tiltX, tiltY, tiltZ);
+          targetQuat.setFromEuler(euler);
+          currentQuat.copy(tileGroup.quaternion);
+          currentQuat.slerp(targetQuat, 0.1);
+          tileGroup.quaternion.copy(currentQuat);
+
+          // Glow
+          const gp = 0.7 + speed * 8 + Math.sin(t * 3) * 0.15;
+          glowSprite.material.opacity = Math.min(gp, 1.0);
+          const gs = 2.8 + speed * 4 + Math.sin(t * 2.5) * 0.2;
+          glowSprite.scale.set(gs, gs * 1.2, 1);
+          rimLight.position.set(tileGroup.position.x, tileGroup.position.y, -1.5);
+
+          renderer.render(scene, camera);
+        })();
+
+        window.addEventListener('resize', () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+      }); // end gltfLoader.load
+    })();
+  </script>
+<!-- How To Play Overlay -->
+<style>
+  #howToPlayOverlay { transition: opacity 0.4s ease; }
+  #howToPlayOverlay.htp-hidden { opacity: 0; pointer-events: none; }
+  #howToPlayOverlay .htp-panel { transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease; }
+  #howToPlayOverlay.htp-hidden .htp-panel { transform: translateY(40px) scale(0.97); opacity: 0; }
+  #howToPlayOverlay .htp-body { scrollbar-width: none; }
+  #howToPlayOverlay .htp-body::-webkit-scrollbar { width: 4px; }
+  #howToPlayOverlay .htp-body::-webkit-scrollbar-track { background: transparent; }
+  #howToPlayOverlay .htp-body::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; transition: background 0.3s; }
+  #howToPlayOverlay .htp-body.is-scrolling::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); }
+  #howToPlayOverlay .htp-content > * { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+  #howToPlayOverlay.htp-animate .htp-content > * { opacity: 1; transform: translateY(0); }
+</style>
+<div id="howToPlayOverlay" class="htp-hidden fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-6" onclick="if(event.target===this) closeHowToPlay();">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div class="htp-panel relative bg-white md:rounded-xl max-w-2xl w-full h-full md:h-auto md:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+
+    <!-- Red header bar -->
+    <div class="flex-shrink-0 bg-ms_red px-5 py-3.5 flex items-center justify-between">
+      <h2 class="text-white font-bold text-lg tracking-wide">How To Play</h2>
+      <button onclick="closeHowToPlay();"
+        class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition cursor-pointer">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="htp-body flex-1 overflow-y-auto px-6 md:px-10 py-8 text-gray-700">
+      <div class="htp-content">
+        <p class="text-base leading-relaxed mb-2">Welcome to MahjongStars.</p>
+        <p class="text-base leading-relaxed mb-4">A social, skill-based Mahjong game where reading the table matters more than luck.</p>
+        <p class="text-sm text-gray-400 italic mb-6">Think patterns, timing, and a bit of instinct.</p>
+
+        <!-- Handphone image -->
+        <div class="mb-8">
+          <img src="img/handphone copy.png" alt="Gameplay" class="w-[85%] md:w-[95%] object-contain">
+        </div>
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">What is MahjongStars?</h3>
+        <p class="text-sm text-gray-600 mb-3">A digital Mahjong experience built around:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>Strategy over chance</li>
+          <li>Pattern building</li>
+          <li>Smart decisions under pressure</li>
+          <li>Playing with others, not alone</li>
+        </ul>
+        <p class="text-sm text-gray-700 mb-1">No betting. No real money.</p>
+        <p class="text-sm text-gray-500 mb-8">Just StarPoints, used only inside the game.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">How do you learn?</h3>
+        <p class="text-sm text-gray-600 mb-3"><strong>Start with the Tutorial.</strong></p>
+        <p class="text-sm text-gray-600 mb-2">It walks you through:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>Rules and tile types</li>
+          <li>Winning hands</li>
+          <li>Scoring</li>
+          <li>Game flow</li>
+        </ul>
+        <p class="text-sm text-gray-500 mb-8">Step by step, interactive, and made for both beginners and experienced players.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">The core idea</h3>
+        <p class="text-sm text-gray-600 mb-3">Mahjong is simple to start, hard to master.</p>
+        <p class="text-sm text-gray-600 mb-2">You:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>Build combinations</li>
+          <li>Complete a valid hand</li>
+          <li>Read opponents</li>
+          <li>Choose the right moment</li>
+        </ul>
+        <p class="text-sm text-gray-500 mb-8">Every move shapes the outcome.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">Getting started</h3>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>Create your account</li>
+          <li>Log in</li>
+          <li>Open the Tutorial</li>
+          <li>Play your first table</li>
+        </ul>
+        <p class="text-sm text-gray-500 mb-8">That's it. You're in.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">Quick questions</h3>
+        <div class="space-y-4 mb-8">
+          <div>
+            <p class="text-sm font-semibold text-gray-800">Is this gambling?</p>
+            <p class="text-sm text-gray-600">No. It's a social game. No betting, no cash prizes.</p>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-800">Can I withdraw money?</p>
+            <p class="text-sm text-gray-600">No. StarPoints stay in the game.</p>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-800">Do I need experience?</p>
+            <p class="text-sm text-gray-600">Not at all. The Tutorial has you covered.</p>
+          </div>
+        </div>
+
+        <hr class="border-gray-200 mb-6">
+
+        <p class="text-sm text-gray-500 text-center">If something feels unclear, reach us at<br>
+          <a href="mailto:support@mahjongstars.com" class="text-red-600 hover:text-red-700 font-medium">support@mahjongstars.com</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  // How To Play overlay open/close with animations
+  function openHowToPlay() {
+    const overlay = document.getElementById('howToPlayOverlay');
+    overlay.style.display = 'flex';
+    overlay.classList.remove('htp-hidden');
+    // Stagger content items
+    const items = overlay.querySelectorAll('.htp-content > *');
+    items.forEach((el, i) => { el.style.transitionDelay = `${0.08 + i * 0.04}s`; });
+    requestAnimationFrame(() => { overlay.classList.add('htp-animate'); });
+    // Scrollbar auto-hide
+    const body = overlay.querySelector('.htp-body');
+    let scrollTimer;
+    body.onscroll = () => {
+      body.classList.add('is-scrolling');
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => body.classList.remove('is-scrolling'), 1200);
+    };
+    document.body.style.overflow = 'hidden';
+  }
+  function closeHowToPlay() {
+    const overlay = document.getElementById('howToPlayOverlay');
+    overlay.classList.add('htp-hidden');
+    overlay.classList.remove('htp-animate');
+    const items = overlay.querySelectorAll('.htp-content > *');
+    items.forEach(el => { el.style.transitionDelay = '0s'; });
+    document.body.style.overflow = '';
+    setTimeout(() => { overlay.style.display = 'none'; }, 500);
+  }
+  // Support overlay — reuse same animation pattern
+  function openSupportOverlay() {
+    const overlay = document.getElementById('supportOverlay');
+    overlay.style.display = 'flex';
+    overlay.classList.remove('htp-hidden');
+    const items = overlay.querySelectorAll('.htp-content > *');
+    items.forEach((el, i) => { el.style.transitionDelay = `${0.08 + i * 0.04}s`; });
+    requestAnimationFrame(() => { overlay.classList.add('htp-animate'); });
+    const body = overlay.querySelector('.htp-body');
+    let scrollTimer;
+    body.onscroll = () => {
+      body.classList.add('is-scrolling');
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => body.classList.remove('is-scrolling'), 1200);
+    };
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSupportOverlay() {
+    const overlay = document.getElementById('supportOverlay');
+    overlay.classList.add('htp-hidden');
+    overlay.classList.remove('htp-animate');
+    const items = overlay.querySelectorAll('.htp-content > *');
+    items.forEach(el => { el.style.transitionDelay = '0s'; });
+    document.body.style.overflow = '';
+    setTimeout(() => { overlay.style.display = 'none'; }, 500);
+  }
+  // Terms of Service overlay
+  function openTermsOverlay() {
+    const overlay = document.getElementById('termsOverlay');
+    overlay.style.display = 'flex';
+    overlay.classList.remove('htp-hidden');
+    const items = overlay.querySelectorAll('.htp-content > *');
+    items.forEach((el, i) => { el.style.transitionDelay = `${0.08 + i * 0.04}s`; });
+    requestAnimationFrame(() => { overlay.classList.add('htp-animate'); });
+    const body = overlay.querySelector('.htp-body');
+    let scrollTimer;
+    body.onscroll = () => {
+      body.classList.add('is-scrolling');
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => body.classList.remove('is-scrolling'), 1200);
+    };
+    document.body.style.overflow = 'hidden';
+  }
+  function closeTermsOverlay() {
+    const overlay = document.getElementById('termsOverlay');
+    overlay.classList.add('htp-hidden');
+    overlay.classList.remove('htp-animate');
+    const items = overlay.querySelectorAll('.htp-content > *');
+    items.forEach(el => { el.style.transitionDelay = '0s'; });
+    document.body.style.overflow = '';
+    setTimeout(() => { overlay.style.display = 'none'; }, 500);
+  }
+  // Privacy Policy overlay
+  function openPrivacyOverlay() {
+    const overlay = document.getElementById('privacyOverlay');
+    overlay.style.display = 'flex';
+    overlay.classList.remove('htp-hidden');
+    const items = overlay.querySelectorAll('.htp-content > *');
+    items.forEach((el, i) => { el.style.transitionDelay = `${0.08 + i * 0.04}s`; });
+    requestAnimationFrame(() => { overlay.classList.add('htp-animate'); });
+    const body = overlay.querySelector('.htp-body');
+    let scrollTimer;
+    body.onscroll = () => {
+      body.classList.add('is-scrolling');
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => body.classList.remove('is-scrolling'), 1200);
+    };
+    document.body.style.overflow = 'hidden';
+  }
+  function closePrivacyOverlay() {
+    const overlay = document.getElementById('privacyOverlay');
+    overlay.classList.add('htp-hidden');
+    overlay.classList.remove('htp-animate');
+    const items = overlay.querySelectorAll('.htp-content > *');
+    items.forEach(el => { el.style.transitionDelay = '0s'; });
+    document.body.style.overflow = '';
+    setTimeout(() => { overlay.style.display = 'none'; }, 500);
+  }
+  // Cookie Policy overlay
+  function openCookiePolicyOverlay() {
+    const overlay = document.getElementById('cookiePolicyOverlay');
+    overlay.style.display = 'flex';
+    overlay.classList.remove('htp-hidden');
+    const items = overlay.querySelectorAll('.htp-content > *');
+    items.forEach((el, i) => { el.style.transitionDelay = `${0.08 + i * 0.04}s`; });
+    requestAnimationFrame(() => { overlay.classList.add('htp-animate'); });
+    const body = overlay.querySelector('.htp-body');
+    let scrollTimer;
+    body.onscroll = () => {
+      body.classList.add('is-scrolling');
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => body.classList.remove('is-scrolling'), 1200);
+    };
+    document.body.style.overflow = 'hidden';
+  }
+  function closeCookiePolicyOverlay() {
+    const overlay = document.getElementById('cookiePolicyOverlay');
+    overlay.classList.add('htp-hidden');
+    overlay.classList.remove('htp-animate');
+    const items = overlay.querySelectorAll('.htp-content > *');
+    items.forEach(el => { el.style.transitionDelay = '0s'; });
+    document.body.style.overflow = '';
+    setTimeout(() => { overlay.style.display = 'none'; }, 500);
+  }
+  // Cookie Settings overlay
+  function openCookieSettingsOverlay() {
+    const overlay = document.getElementById('cookieSettingsOverlay');
+    overlay.style.display = 'flex';
+    overlay.classList.remove('htp-hidden');
+    requestAnimationFrame(() => { overlay.classList.add('htp-animate'); });
+    document.body.style.overflow = 'hidden';
+  }
+  function closeCookieSettingsOverlay() {
+    const overlay = document.getElementById('cookieSettingsOverlay');
+    overlay.classList.add('htp-hidden');
+    overlay.classList.remove('htp-animate');
+    document.body.style.overflow = '';
+    setTimeout(() => { overlay.style.display = 'none'; }, 500);
+  }
+  function saveCookieSettings() {
+    closeCookieSettingsOverlay();
+    closeCookieBanner();
+  }
+</script>
+
+<!-- Support Overlay -->
+<style>
+  #supportOverlay { transition: opacity 0.4s ease; }
+  #supportOverlay.htp-hidden { opacity: 0; pointer-events: none; }
+  #supportOverlay .htp-panel { transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease; }
+  #supportOverlay.htp-hidden .htp-panel { transform: translateY(40px) scale(0.97); opacity: 0; }
+  #supportOverlay .htp-body { scrollbar-width: none; }
+  #supportOverlay .htp-body::-webkit-scrollbar { width: 4px; }
+  #supportOverlay .htp-body::-webkit-scrollbar-track { background: transparent; }
+  #supportOverlay .htp-body::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; transition: background 0.3s; }
+  #supportOverlay .htp-body.is-scrolling::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); }
+  #supportOverlay .htp-content > * { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+  #supportOverlay.htp-animate .htp-content > * { opacity: 1; transform: translateY(0); }
+</style>
+<div id="supportOverlay" class="htp-hidden fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-6" onclick="if(event.target===this) closeSupportOverlay();" style="display:none;">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div class="htp-panel relative bg-white md:rounded-xl max-w-2xl w-full h-full md:h-auto md:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+
+    <!-- Red header bar -->
+    <div class="flex-shrink-0 bg-ms_red px-5 py-3.5 flex items-center justify-between">
+      <h2 class="text-white font-bold text-lg tracking-wide">Support</h2>
+      <button onclick="closeSupportOverlay();"
+        class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition cursor-pointer">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="htp-body flex-1 overflow-y-auto px-6 md:px-10 py-8 text-gray-700">
+      <div class="htp-content">
+        <p class="text-base leading-relaxed mb-1">Something not working the way it should?</p>
+        <p class="text-base leading-relaxed font-semibold text-gray-900 mb-4">We've got you.</p>
+        <p class="text-sm text-gray-600 mb-8">Whether it's your account, a match, or a purchase, just reach out and we'll help you sort it.</p>
+
+        <!-- Support image -->
+        <div class="mb-8">
+          <img src="img/support.png" alt="Support" class="w-[85%] md:w-[75%] object-contain">
+        </div>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">Get in touch</h3>
+        <p class="text-sm mb-4"><a href="mailto:support@mahjongstars.com" class="text-red-600 hover:text-red-700 font-medium">support@mahjongstars.com</a></p>
+        <p class="text-sm text-gray-600 mb-2">A few details help us move faster:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>Your username or Player ID</li>
+          <li>The email linked to your account</li>
+          <li>What happened (short and clear is perfect)</li>
+          <li>Screenshots, if you have them</li>
+        </ul>
+        <p class="text-sm text-gray-500 mb-8">We usually reply within 48 hours on business days.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">Account & login</h3>
+        <p class="text-sm text-gray-600 mb-3">Locked out? Something feels off?</p>
+        <p class="text-sm text-gray-600 mb-2">Send us:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>Your username</li>
+          <li>Last time you accessed your account (roughly)</li>
+          <li>Device you were using</li>
+        </ul>
+        <p class="text-sm text-gray-500 mb-8">We may ask a couple of extra questions, just to keep things secure.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">Purchases</h3>
+        <p class="text-sm text-gray-600 mb-2">Bought something through Apple or Google Play?</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-4 space-y-1">
+          <li>Apple &rarr; request refunds via <span class="text-gray-800 font-medium">reportaproblem.apple.com</span></li>
+          <li>Google Play &rarr; follow Google Play refund flow</li>
+        </ul>
+        <p class="text-sm text-gray-600 mb-2">We don't process store refunds directly, but we'll guide you if something feels wrong.</p>
+        <p class="text-sm text-gray-600 mb-2">If a payment is reversed, some in-game items may be affected.</p>
+        <p class="text-sm text-gray-500 mb-8">Best to contact us first so we can help before things get messy.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">StarPoints</h3>
+        <p class="text-sm text-gray-600 mb-3">StarPoints live inside the game.</p>
+        <p class="text-sm text-gray-600 mb-2">They:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>Have no real-world value</li>
+          <li>Can't be withdrawn</li>
+          <li>Are used only in MahjongStars</li>
+        </ul>
+        <p class="text-sm text-gray-500 mb-8">If something doesn't look right, tell us and we'll check.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">Technical issues</h3>
+        <p class="text-sm text-gray-600 mb-3">Game acting weird?</p>
+        <p class="text-sm text-gray-600 mb-2">Send us:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>Your device</li>
+          <li>OS version</li>
+          <li>App version</li>
+          <li>What happened</li>
+        </ul>
+        <p class="text-sm text-gray-500 mb-8">The clearer it is, the faster we fix it.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">Reporting players</h3>
+        <p class="text-sm text-gray-600 mb-3">Seen something that doesn't feel fair?</p>
+        <p class="text-sm text-gray-600 mb-2">Let us know:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>Username</li>
+          <li>What happened</li>
+          <li>Screenshots if possible</li>
+        </ul>
+        <p class="text-sm text-gray-500 mb-8">We take this seriously. Always.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">Play, but keep it healthy</h3>
+        <p class="text-sm text-gray-600 mb-1">MahjongStars is about fun, not pressure.</p>
+        <p class="text-sm text-gray-600 mb-4">No gambling, no real money.</p>
+        <p class="text-sm text-gray-500 mb-8">If it stops feeling fun, it's a good moment to pause.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">Privacy & legal</h3>
+        <p class="text-sm text-gray-600 mb-2">For data, privacy, or legal questions:</p>
+        <p class="text-sm mb-8"><a href="mailto:privacy@mahjongstars.com" class="text-red-600 hover:text-red-700 font-medium">privacy@mahjongstars.com</a></p>
+
+        <hr class="border-gray-200 mb-6">
+
+        <p class="text-sm text-gray-500 text-center">If something's off, just write.<br>We're on the other side.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Terms of Service Overlay -->
+<style>
+  #termsOverlay { transition: opacity 0.4s ease; }
+  #termsOverlay.htp-hidden { opacity: 0; pointer-events: none; }
+  #termsOverlay .htp-panel { transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease; }
+  #termsOverlay.htp-hidden .htp-panel { transform: translateY(40px) scale(0.97); opacity: 0; }
+  #termsOverlay .htp-body { scrollbar-width: none; }
+  #termsOverlay .htp-body::-webkit-scrollbar { width: 4px; }
+  #termsOverlay .htp-body::-webkit-scrollbar-track { background: transparent; }
+  #termsOverlay .htp-body::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; transition: background 0.3s; }
+  #termsOverlay .htp-body.is-scrolling::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); }
+  #termsOverlay .htp-content > * { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+  #termsOverlay.htp-animate .htp-content > * { opacity: 1; transform: translateY(0); }
+</style>
+<div id="termsOverlay" class="htp-hidden fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-6" onclick="if(event.target===this) closeTermsOverlay();" style="display:none;">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div class="htp-panel relative bg-white md:rounded-xl max-w-2xl w-full h-full md:h-auto md:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+
+    <!-- Red header bar -->
+    <div class="flex-shrink-0 bg-ms_red px-5 py-3.5 flex items-center justify-between">
+      <h2 class="text-white font-bold text-lg tracking-wide">Terms of Service</h2>
+      <button onclick="closeTermsOverlay();"
+        class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition cursor-pointer">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="htp-body flex-1 overflow-y-auto px-6 md:px-10 py-8 text-gray-700">
+      <div class="htp-content">
+        <p class="text-xs text-gray-400 mb-1">Effective Date: 1 January 2026</p>
+        <p class="text-xs text-gray-400 mb-1">Last Updated: 12 February 2026</p>
+        <p class="text-xs text-gray-400 mb-1">Website: MahjongStars.com</p>
+        <p class="text-xs text-gray-400 mb-6">Service: MahjongStars (website, apps, and related services)</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">1. Company Information</h3>
+        <p class="text-sm text-gray-600 mb-2">MahjongStars is operated by:</p>
+        <p class="text-sm text-gray-800 font-semibold mb-1">Wasabi Games DMCC</p>
+        <p class="text-xs text-gray-500 mb-1">License No: DMCC-919416</p>
+        <p class="text-xs text-gray-500 mb-1">Unit No: O5-PF-CWC139, Detached Retail O5, Jumeirah Lake Towers, Dubai, UAE</p>
+        <p class="text-xs text-gray-500 mb-8">Contact: <a href="mailto:support@mahjongstars.com" class="text-red-600 hover:text-red-700">support@mahjongstars.com</a> (support) | <a href="mailto:legal@mahjongstars.com" class="text-red-600 hover:text-red-700">legal@mahjongstars.com</a> (legal)</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">2. Acceptance of These Terms</h3>
+        <p class="text-sm text-gray-600 mb-8">By accessing or using the Service, you agree to these Terms of Service ("Terms"). If you do not agree, do not use the Service.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">3. Eligibility and Age Restriction</h3>
+        <p class="text-sm text-gray-600 mb-3">You must be 18 years or older to use the Service. By creating an account or using the Service, you confirm you are at least 18 and legally permitted to use the Service in your jurisdiction.</p>
+        <p class="text-sm text-gray-600 mb-8">We may restrict or suspend access if we reasonably believe you are under 18 or if required for compliance.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">4. What MahjongStars Is (and Is Not)</h3>
+        <p class="text-sm text-gray-600 mb-3">MahjongStars is a social, skill-based digital entertainment Mahjong game.</p>
+        <p class="text-sm text-gray-800 font-semibold mb-2">MahjongStars is NOT a gambling service. The Service:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>does not offer real-money wagering or betting,</li>
+          <li>does not offer cash prizes,</li>
+          <li>does not allow deposits/withdrawals,</li>
+          <li>does not allow conversion of any in-game items or currency into money or items of real-world value,</li>
+          <li>is for entertainment only.</li>
+        </ul>
+
+        <hr class="border-gray-200 my-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">5. Accounts and Security</h3>
+        <p class="text-sm text-gray-600 mb-2">You are responsible for:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>keeping your account credentials secure,</li>
+          <li>all activity under your account,</li>
+          <li>providing accurate information.</li>
+        </ul>
+        <p class="text-sm text-gray-600 mb-8">You must notify us immediately if you suspect unauthorized access.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">6. Virtual Currency and Virtual Items (StarPoints)</h3>
+        <p class="text-sm text-gray-600 mb-3">MahjongStars may include virtual in-game currency ("StarPoints") and/or virtual items ("Virtual Items").</p>
+        <p class="text-sm text-gray-800 font-semibold mb-2">Important: StarPoints and Virtual Items:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>have no monetary value,</li>
+          <li>are not legal tender,</li>
+          <li>are not redeemable for cash, cryptocurrency, or anything of monetary value,</li>
+          <li>may not be sold, traded, or transferred outside the Service,</li>
+          <li>are licensed, not sold to you, and your license may be revoked if you violate these Terms.</li>
+        </ul>
+        <p class="text-sm text-gray-600 mb-8">We may modify, regulate, suspend, or remove StarPoints or Virtual Items at any time (for example, for balancing, security, fraud prevention, or compliance), as permitted by law.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">7. Purchases, Billing, and Refunds</h3>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">7.1 Digital Goods Only</h4>
+        <p class="text-sm text-gray-600 mb-4">All purchases in the Service are for digital entertainment content (virtual currency and/or Virtual Items) only.</p>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">7.2 Platform Billing Rules</h4>
+        <p class="text-sm text-gray-600 mb-4">If you use MahjongStars via the Apple App Store or Google Play, purchases must follow that platform's billing rules (including use of their billing systems where required).</p>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">7.3 No Stored Value / No Custody of Funds</h4>
+        <p class="text-sm text-gray-600 mb-4">MahjongStars does not provide payment accounts, stored-value accounts, or custody of user funds. We do not hold funds for users.</p>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">7.4 Refunds</h4>
+        <p class="text-sm text-gray-600 mb-2">Purchases are final except where required by applicable law or by the platform's refund policy.</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-4 space-y-1">
+          <li>Apple App Store purchases: refunds are handled by Apple under Apple's policies.</li>
+          <li>Google Play purchases: refunds are handled under Google's policies and applicable law.</li>
+        </ul>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">7.5 Chargebacks and Reversals</h4>
+        <p class="text-sm text-gray-600 mb-2">If a purchase is refunded, reversed, charged back, or disputed:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>we may remove the associated StarPoints/Virtual Items,</li>
+          <li>we may suspend or terminate the account,</li>
+          <li>we may restrict future transactions.</li>
+        </ul>
+        <p class="text-sm text-gray-600 mb-8">We may investigate and take action to prevent fraud, bonus abuse, or payment misuse.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">8. No Cash-Out; No External Trading</h3>
+        <p class="text-sm text-gray-600 mb-2">You may not:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>cash out StarPoints or Virtual Items,</li>
+          <li>exchange them for money/crypto,</li>
+          <li>sell them (including via third-party sites),</li>
+          <li>use the Service for money laundering or other financial misuse.</li>
+        </ul>
+        <p class="text-sm text-gray-600 mb-8">Attempts to do so may result in immediate account termination.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">9. PSP Compliance Policy</h3>
+        <p class="text-sm text-gray-600 mb-2">To meet payment provider requirements and protect the Service:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-8 space-y-1">
+          <li>we monitor for unusual behavior and suspicious transaction patterns,</li>
+          <li>we may request additional verification where legally permitted and proportionate,</li>
+          <li>we may block or reverse transactions suspected of fraud,</li>
+          <li>we may report suspected illegal activity to relevant institutions or authorities where required.</li>
+        </ul>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">10. Responsible Social Play</h3>
+        <p class="text-sm text-gray-600 mb-8">MahjongStars is designed for entertainment. We encourage players to play responsibly and take breaks when needed. StarPoints are virtual and have no real-world value, and the Service does not offer gambling, wagering, or cash prizes.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">11. Prohibited Conduct</h3>
+        <p class="text-sm text-gray-600 mb-2">You may not:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>cheat, hack, use bots/automation, or exploit bugs,</li>
+          <li>reverse engineer or interfere with the Service,</li>
+          <li>harass, threaten, or abuse others,</li>
+          <li>attempt unauthorized access to accounts or systems,</li>
+          <li>commit fraud or payment abuse.</li>
+        </ul>
+        <p class="text-sm text-gray-600 mb-8">We may suspend or terminate accounts for violations.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">12. User Content and Community Safety</h3>
+        <p class="text-sm text-gray-600 mb-2">If the Service allows you to post content (chat, usernames, avatars, etc.), you agree:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-8 space-y-1">
+          <li>you are responsible for what you submit,</li>
+          <li>you will not submit illegal, abusive, hateful, sexual, or harmful content,</li>
+          <li>we may remove content or restrict accounts for safety and compliance.</li>
+        </ul>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">13. Intellectual Property</h3>
+        <p class="text-sm text-gray-600 mb-8">The Service (software, graphics, game mechanics, brand assets, trademarks) is owned by Wasabi Games DMCC or licensors. You receive a limited, revocable, non-transferable license to use the Service for personal entertainment, subject to these Terms.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">14. Service Availability and Changes</h3>
+        <p class="text-sm text-gray-600 mb-8">We may update, modify, suspend, or discontinue parts of the Service at any time. We are not liable for interruptions, downtime, or changes, to the extent permitted by law.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">15. Termination</h3>
+        <p class="text-sm text-gray-600 mb-3">We may suspend or terminate your access immediately if we believe you violated these Terms, engaged in fraud, or for compliance/safety reasons.</p>
+        <p class="text-sm text-gray-600 mb-8">Upon termination, you may lose access to StarPoints/Virtual Items without compensation, except where required by law.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">16. Disclaimers</h3>
+        <p class="text-sm text-gray-600 mb-8">The Service is provided "as is" and "as available" to the maximum extent permitted by law. We do not guarantee uninterrupted service, error-free operation, or that virtual balances will always be available without interruption.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">17. Limitation of Liability</h3>
+        <p class="text-sm text-gray-600 mb-8">To the maximum extent permitted by law, we are not liable for indirect, incidental, special, consequential, or punitive damages, or loss of profits/data, arising from your use of the Service.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">18. Indemnity</h3>
+        <p class="text-sm text-gray-600 mb-8">You agree to indemnify and hold us harmless from claims arising out of your misuse of the Service, violation of these Terms, or violation of laws/third-party rights.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">19. Governing Law</h3>
+        <p class="text-sm text-gray-600 mb-8">These Terms are governed by the laws of the United Arab Emirates, without regard to conflict-of-law rules, to the extent permitted.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">20. Changes to These Terms</h3>
+        <p class="text-sm text-gray-600 mb-8">We may update these Terms from time to time. If changes are material, we will take reasonable steps to notify you (e.g., in-app notice or website posting). Continued use means you accept the updated Terms.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">21. Platform-Specific Terms</h3>
+        <p class="text-sm text-gray-600 mb-2">If you use an iOS version of the Service:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>Apple is not responsible for the Service and has no obligation to provide support.</li>
+          <li>Apple is a third-party beneficiary of these Terms and may enforce them.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Privacy Policy Overlay -->
+<style>
+  #privacyOverlay { transition: opacity 0.4s ease; }
+  #privacyOverlay.htp-hidden { opacity: 0; pointer-events: none; }
+  #privacyOverlay .htp-panel { transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease; }
+  #privacyOverlay.htp-hidden .htp-panel { transform: translateY(40px) scale(0.97); opacity: 0; }
+  #privacyOverlay .htp-body { scrollbar-width: none; }
+  #privacyOverlay .htp-body::-webkit-scrollbar { width: 4px; }
+  #privacyOverlay .htp-body::-webkit-scrollbar-track { background: transparent; }
+  #privacyOverlay .htp-body::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; transition: background 0.3s; }
+  #privacyOverlay .htp-body.is-scrolling::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); }
+  #privacyOverlay .htp-content > * { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+  #privacyOverlay.htp-animate .htp-content > * { opacity: 1; transform: translateY(0); }
+</style>
+<div id="privacyOverlay" class="htp-hidden fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-6" onclick="if(event.target===this) closePrivacyOverlay();" style="display:none;">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div class="htp-panel relative bg-white md:rounded-xl max-w-2xl w-full h-full md:h-auto md:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+
+    <!-- Red header bar -->
+    <div class="flex-shrink-0 bg-ms_red px-5 py-3.5 flex items-center justify-between">
+      <h2 class="text-white font-bold text-lg tracking-wide">Privacy Policy</h2>
+      <button onclick="closePrivacyOverlay();"
+        class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition cursor-pointer">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="htp-body flex-1 overflow-y-auto px-6 md:px-10 py-8 text-gray-700">
+      <div class="htp-content">
+        <p class="text-xs text-gray-400 mb-1">Effective Date: 1 January 2026</p>
+        <p class="text-xs text-gray-400 mb-6">Last Updated: 12 February 2026</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">1. Who We Are</h3>
+        <p class="text-sm text-gray-600 mb-1"><strong>Controller:</strong> Wasabi Games DMCC</p>
+        <p class="text-sm text-gray-600 mb-1"><strong>Address:</strong> Unit No: O5-PF-CWC139, Detached Retail O5, JLT, Dubai, UAE</p>
+        <p class="text-sm text-gray-600 mb-8"><strong>Contact:</strong> <a href="mailto:privacy@mahjongstars.com" class="text-red-600 hover:text-red-700">privacy@mahjongstars.com</a></p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">2. Scope</h3>
+        <p class="text-sm text-gray-600 mb-8">This Privacy Policy explains how we collect, use, share, and protect personal data when you use MahjongStars.com and related apps/services.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">3. Data We Collect</h3>
+        <p class="text-sm text-gray-600 mb-4">Depending on how you use the Service, we may collect:</p>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">3.1 Account Data</h4>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-4 space-y-1">
+          <li>email address</li>
+          <li>username / player ID</li>
+          <li>country/region</li>
+          <li>age confirmation (18+)</li>
+        </ul>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">3.2 Gameplay and Usage Data</h4>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-4 space-y-1">
+          <li>game sessions, match history, results</li>
+          <li>virtual currency balances and transactions (in-game)</li>
+          <li>device and interaction data (for performance and anti-fraud)</li>
+        </ul>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">3.3 Device and Technical Data</h4>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-4 space-y-1">
+          <li>IP address</li>
+          <li>device identifiers (where permitted)</li>
+          <li>OS, app version, language</li>
+          <li>crash logs, performance diagnostics</li>
+        </ul>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">3.4 Payments</h4>
+        <p class="text-sm text-gray-600 mb-4">Payments are processed by platform providers (Apple/Google) and/or authorized payment service providers. We do not store full payment card details. We may receive limited transaction metadata (e.g., purchase confirmation, product ID, time, country) to deliver purchases and prevent fraud.</p>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">3.5 Support Communications</h4>
+        <p class="text-sm text-gray-600 mb-8">If you contact support, we collect the info you provide and communications metadata.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">4. How We Use Your Data</h3>
+        <p class="text-sm text-gray-600 mb-2">We use personal data to:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-8 space-y-1">
+          <li>provide and operate the Service</li>
+          <li>create and manage accounts</li>
+          <li>deliver purchases and virtual items</li>
+          <li>prevent fraud, abuse, and chargebacks</li>
+          <li>maintain security and integrity</li>
+          <li>comply with legal obligations</li>
+          <li>improve features and performance</li>
+          <li>provide customer support</li>
+        </ul>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">5. Legal Bases (EEA/UK)</h3>
+        <p class="text-sm text-gray-600 mb-2">Where GDPR applies, our legal bases include:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-8 space-y-1">
+          <li><strong>contract</strong> (to provide the Service)</li>
+          <li><strong>legitimate interests</strong> (security, fraud prevention, analytics, product improvement)</li>
+          <li><strong>legal obligation</strong> (compliance requirements)</li>
+          <li><strong>consent</strong> (for cookies/marketing where required)</li>
+        </ul>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">6. Sharing and Disclosure</h3>
+        <p class="text-sm text-gray-600 mb-2">We may share data with:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>hosting and infrastructure providers</li>
+          <li>analytics and crash reporting providers (if enabled)</li>
+          <li>payment processors / app stores to process purchases and confirmations</li>
+          <li>fraud prevention and security service providers</li>
+          <li>legal/regulatory authorities where required</li>
+        </ul>
+        <p class="text-sm text-gray-800 font-semibold mb-8">We do not sell personal data.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">7. International Transfers</h3>
+        <p class="text-sm text-gray-600 mb-8">We operate from the UAE and may use providers in other countries. Where required, we apply appropriate safeguards for international transfers (such as contractual protections).</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">8. Retention</h3>
+        <p class="text-sm text-gray-600 mb-2">We keep data only as long as necessary for:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>providing the Service</li>
+          <li>security and fraud prevention</li>
+          <li>legal obligations and dispute resolution</li>
+        </ul>
+        <p class="text-sm text-gray-600 mb-8">Retention periods may vary depending on the data type and legal requirements.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">9. Your Rights</h3>
+        <p class="text-sm text-gray-600 mb-2">Depending on your location, you may have rights to:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>access your data</li>
+          <li>correct inaccurate data</li>
+          <li>delete data (where applicable)</li>
+          <li>object to processing or restrict processing</li>
+          <li>data portability</li>
+          <li>withdraw consent (where processing is based on consent)</li>
+        </ul>
+        <p class="text-sm text-gray-600 mb-8">Request via <a href="mailto:privacy@mahjongstars.com" class="text-red-600 hover:text-red-700">privacy@mahjongstars.com</a>.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">10. Security</h3>
+        <p class="text-sm text-gray-600 mb-8">We use reasonable technical and organizational measures to protect personal data. No method of transmission or storage is 100% secure, but we work to maintain appropriate safeguards.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">11. Children</h3>
+        <p class="text-sm text-gray-600 mb-8">MahjongStars is not intended for users under 18. We do not knowingly collect personal data from minors. If you believe a minor has provided data, contact us and we will take appropriate steps.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">12. Changes to This Policy</h3>
+        <p class="text-sm text-gray-600">We may update this Privacy Policy from time to time. We will post updates on MahjongStars.com and may provide additional notice for material changes.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cookie Policy Overlay -->
+<style>
+  #cookiePolicyOverlay { transition: opacity 0.4s ease; }
+  #cookiePolicyOverlay.htp-hidden { opacity: 0; pointer-events: none; }
+  #cookiePolicyOverlay .htp-panel { transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease; }
+  #cookiePolicyOverlay.htp-hidden .htp-panel { transform: translateY(40px) scale(0.97); opacity: 0; }
+  #cookiePolicyOverlay .htp-body { scrollbar-width: none; }
+  #cookiePolicyOverlay .htp-body::-webkit-scrollbar { width: 4px; }
+  #cookiePolicyOverlay .htp-body::-webkit-scrollbar-track { background: transparent; }
+  #cookiePolicyOverlay .htp-body::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; transition: background 0.3s; }
+  #cookiePolicyOverlay .htp-body.is-scrolling::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); }
+  #cookiePolicyOverlay .htp-content > * { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+  #cookiePolicyOverlay.htp-animate .htp-content > * { opacity: 1; transform: translateY(0); }
+</style>
+<div id="cookiePolicyOverlay" class="htp-hidden fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-6" onclick="if(event.target===this) closeCookiePolicyOverlay();" style="display:none;">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div class="htp-panel relative bg-white md:rounded-xl max-w-2xl w-full h-full md:h-auto md:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+
+    <!-- Red header bar -->
+    <div class="flex-shrink-0 bg-ms_red px-5 py-3.5 flex items-center justify-between">
+      <h2 class="text-white font-bold text-lg tracking-wide">Cookie Policy</h2>
+      <button onclick="closeCookiePolicyOverlay();"
+        class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition cursor-pointer">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="htp-body flex-1 overflow-y-auto px-6 md:px-10 py-8 text-gray-700">
+      <div class="htp-content">
+        <p class="text-xs text-gray-400 mb-1">Effective Date: 1 January 2026</p>
+        <p class="text-xs text-gray-400 mb-6">Last Updated: 12 February 2026</p>
+
+        <!-- Cookie image -->
+        <div class="mb-8">
+          <img src="img/cookies.png" alt="Cookies" class="w-[85%] md:w-[37%] object-contain">
+        </div>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">1. What Cookies Are</h3>
+        <p class="text-sm text-gray-600 mb-8">Cookies are small text files stored on your device when you visit a website. Similar technologies include pixels and local storage.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">2. Why We Use Cookies</h3>
+        <p class="text-sm text-gray-600 mb-2">We use cookies to:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-8 space-y-1">
+          <li>keep the site secure and functioning</li>
+          <li>remember preferences</li>
+          <li>understand site usage to improve performance</li>
+          <li>help prevent fraud and abuse</li>
+        </ul>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">3. Types of Cookies We Use</h3>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">3.1 Strictly Necessary Cookies</h4>
+        <p class="text-sm text-gray-600 mb-4">Required for core functionality such as login, session security, and fraud prevention. These cannot be disabled in systems that require them for operation.</p>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">3.2 Preferences Cookies</h4>
+        <p class="text-sm text-gray-600 mb-4">Help remember choices like language or region (if enabled).</p>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">3.3 Analytics Cookies</h4>
+        <p class="text-sm text-gray-600 mb-4">Help us understand how users interact with the site so we can improve performance and user experience. These are used only where permitted and, where required, based on consent.</p>
+
+        <h4 class="text-base font-semibold text-gray-800 mb-2">3.4 Marketing Cookies (If Ever Enabled)</h4>
+        <p class="text-sm text-gray-600 mb-8">Used to measure advertising effectiveness and show relevant marketing. If enabled, we will request consent where required.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">4. Consent (EU/UK)</h3>
+        <p class="text-sm text-gray-600 mb-2">Where required by law, we will request your consent before setting non-essential cookies. You can change cookie preferences at any time via:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-8 space-y-1">
+          <li>our cookie banner/settings (if available), and/or</li>
+          <li>your browser settings.</li>
+        </ul>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">5. Managing Cookies</h3>
+        <p class="text-sm text-gray-600 mb-2">Most browsers allow you to:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>delete cookies</li>
+          <li>block cookies</li>
+          <li>control cookie behavior per site</li>
+        </ul>
+        <p class="text-sm text-gray-600 mb-8">Blocking some cookies may affect site functionality.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">6. Third-Party Cookies</h3>
+        <p class="text-sm text-gray-600 mb-8">Some cookies may be set by third-party service providers we use (for example, analytics or security providers). Those providers may process data under their own policies.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">7. Analytics Cookies</h3>
+        <p class="text-sm text-gray-600 mb-3">If you consent to analytics, our website uses Google Analytics 4 ("GA4") to understand how visitors use the site. GA4 may set cookies such as <code class="bg-gray-100 px-1 rounded text-xs">_ga</code> and <code class="bg-gray-100 px-1 rounded text-xs">_ga_&lt;container-id&gt;</code> to measure usage patterns, session information, and general interaction data. These cookies are only created after you provide consent for analytics.</p>
+        <p class="text-sm text-gray-600 mb-8">If you later withdraw consent, analytics cookies may remain stored in your browser until they expire, but they are no longer used by our website and no further analytics data is collected.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">8. Data Collected by Analytics Cookies</h3>
+        <p class="text-sm text-gray-600 mb-2">If you consent to analytics, GA4 may collect information such as:</p>
+        <ul class="text-sm text-gray-600 list-disc pl-5 mb-3 space-y-1">
+          <li>IP address (anonymized where applicable)</li>
+          <li>Device type, operating system, and browser version</li>
+          <li>Screen resolution and device settings</li>
+          <li>Pages visited and time spent on each page</li>
+          <li>Clicks, scrolls, and general interaction data</li>
+          <li>Referrer URL (the site you came from)</li>
+          <li>Approximate geographic region (city/country level)</li>
+          <li>Session duration and navigation paths</li>
+        </ul>
+        <p class="text-sm text-gray-600 mb-8">This information helps us understand how visitors use our website and improve performance and user experience.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">9. Google Analytics 4 Cookies</h3>
+        <p class="text-sm text-gray-600 mb-4">If you consent to analytics, GA4 may set one or more of the following cookies. These cookies help measure how visitors use the website. GA4 does not always set all cookies; behavior may vary depending on browser, device, and consent settings.</p>
+
+        <!-- Cookie table -->
+        <div class="overflow-x-auto mb-4">
+          <table class="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+            <thead>
+              <tr class="bg-gray-50">
+                <th class="text-left px-3 py-2 font-semibold text-gray-800 border-b border-gray-200">Cookie Name</th>
+                <th class="text-left px-3 py-2 font-semibold text-gray-800 border-b border-gray-200">Purpose</th>
+                <th class="text-left px-3 py-2 font-semibold text-gray-800 border-b border-gray-200">Expiration</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-600">
+              <tr>
+                <td class="px-3 py-2 border-b border-gray-100 font-mono text-xs">_ga</td>
+                <td class="px-3 py-2 border-b border-gray-100">Used to distinguish unique users by assigning a random identifier.</td>
+                <td class="px-3 py-2 border-b border-gray-100">2 years</td>
+              </tr>
+              <tr>
+                <td class="px-3 py-2 font-mono text-xs">_ga_&lt;container-id&gt;</td>
+                <td class="px-3 py-2">Stores session state and helps GA4 track session counts and engagement.</td>
+                <td class="px-3 py-2">2 years</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-sm text-gray-600 mb-8">GA4 may also operate without cookies when consent is denied, using anonymous "cookieless pings" to measure basic traffic volumes without identifying users.</p>
+
+        <hr class="border-gray-200 mb-8">
+
+        <h3 class="text-xl font-bold text-gray-900 mb-3">10. Updates</h3>
+        <p class="text-sm text-gray-600">We may update this Cookie Policy as our website evolves.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cookie Settings Overlay -->
+<style>
+  #cookieSettingsOverlay { transition: opacity 0.4s ease; }
+  #cookieSettingsOverlay.htp-hidden { opacity: 0; pointer-events: none; }
+  #cookieSettingsOverlay .cs-panel { transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease; }
+  #cookieSettingsOverlay.htp-hidden .cs-panel { transform: translateY(40px) scale(0.97); opacity: 0; }
+  /* Custom toggle switch */
+  .cookie-toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .cookie-toggle input { opacity: 0; width: 0; height: 0; }
+  .cookie-toggle .slider { position: absolute; inset: 0; background: #ccc; border-radius: 24px; transition: background 0.3s; cursor: pointer; }
+  .cookie-toggle .slider::before { content: ''; position: absolute; left: 2px; bottom: 2px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: transform 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  .cookie-toggle input:checked + .slider { background: #C41208; }
+  .cookie-toggle input:checked + .slider::before { transform: translateX(20px); }
+  .cookie-toggle input:disabled + .slider { opacity: 0.7; cursor: not-allowed; }
+</style>
+<div id="cookieSettingsOverlay" class="htp-hidden fixed inset-0 z-[110] flex items-center justify-center p-4 md:p-6" onclick="if(event.target===this) closeCookieSettingsOverlay();" style="display:none;">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div class="cs-panel relative bg-white rounded-xl max-w-md w-full shadow-2xl flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <div class="px-6 pt-6 pb-2">
+      <h2 class="text-xl font-bold text-gray-900 text-center">Cookie Settings</h2>
+    </div>
+
+    <!-- Cookie options -->
+    <div class="px-6 py-4 space-y-5">
+      <!-- Necessary -->
+      <div class="flex items-start gap-4">
+        <label class="cookie-toggle mt-0.5">
+          <input type="checkbox" checked disabled>
+          <span class="slider"></span>
+        </label>
+        <div>
+          <p class="text-sm font-semibold text-gray-900">Necessary Cookies</p>
+          <p class="text-xs text-gray-500 mt-0.5">Required for the website to function. Cannot be disabled.</p>
+        </div>
+      </div>
+
+      <!-- Analytics -->
+      <div class="flex items-start gap-4">
+        <label class="cookie-toggle mt-0.5">
+          <input type="checkbox" id="cookieAnalyticsToggle">
+          <span class="slider"></span>
+        </label>
+        <div>
+          <p class="text-sm font-semibold text-gray-900">Analytics Cookies</p>
+          <p class="text-xs text-gray-500 mt-0.5">Helps us understand how visitors use the site.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="px-6 pb-6 pt-2 flex gap-3 justify-end">
+      <button onclick="closeCookieSettingsOverlay();"
+        class="px-5 py-2.5 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition cursor-pointer">Cancel</button>
+      <button onclick="saveCookieSettings();"
+        class="px-5 py-2.5 rounded-lg bg-ms_red text-white text-sm font-medium hover:bg-[#B00400] transition cursor-pointer">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
