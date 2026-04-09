@@ -85,9 +85,9 @@
     }
     .reveal-scale {
       opacity: 0;
-      transform: perspective(600px) translateY(120px) translateZ(-80px) rotateX(18deg) scale(0.88);
+      transform: perspective(600px) translateY(80px) translateZ(-60px) rotateX(12deg) scale(0.92);
       transform-origin: center bottom;
-      transition: opacity 1.6s cubic-bezier(0.22, 0.61, 0.36, 1), transform 1.6s cubic-bezier(0.22, 0.61, 0.36, 1);
+      transition: opacity 1.1s cubic-bezier(0.25, 1, 0.5, 1), transform 1.1s cubic-bezier(0.25, 1, 0.5, 1);
     }
     .reveal.visible, .reveal-left.visible, .reveal-right.visible, .reveal-scale.visible {
       opacity: 1;
@@ -328,7 +328,6 @@
 
     .feature-card {
       flex: 0 0 280px;
-      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), z-index 0s;
       transform-style: preserve-3d;
       cursor: pointer;
       will-change: transform;
@@ -339,7 +338,7 @@
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 20px;
       overflow: hidden;
-      transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+      transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
       backdrop-filter: blur(10px);
     }
 
@@ -364,7 +363,7 @@
       max-width: 100%;
       object-fit: contain;
       user-select: none;
-      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
     }
 
     .feature-card:hover .feature-card-img img {
@@ -392,19 +391,23 @@
     /* Desktop: 3D perspective tilt on hover — only after reveal is done */
     @media (min-width: 768px) {
       .feature-card.reveal-scale:not(.visible) {
-        transform: perspective(600px) translateY(120px) translateZ(-80px) rotateX(18deg) scale(0.88);
+        transform: perspective(600px) translateY(80px) translateZ(-60px) rotateX(12deg) scale(0.92);
       }
       .feature-card.visible {
         transform: rotateY(0deg) scale(1);
       }
-      .feature-card.visible:hover {
+      /* After intro completes, swap to fast hover transition */
+      .feature-card.hover-ready {
+        transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
+      }
+      .feature-card.hover-ready:hover {
         transform: rotateY(0deg) scale(1.04) translateY(-8px);
         z-index: 10;
       }
-      .feature-card.visible:nth-child(1):hover { transform: perspective(800px) rotateY(3deg) scale(1.04) translateY(-8px); }
-      .feature-card.visible:nth-child(2):hover { transform: perspective(800px) rotateY(1deg) scale(1.04) translateY(-8px); }
-      .feature-card.visible:nth-child(3):hover { transform: perspective(800px) rotateY(-1deg) scale(1.04) translateY(-8px); }
-      .feature-card.visible:nth-child(4):hover { transform: perspective(800px) rotateY(-3deg) scale(1.04) translateY(-8px); }
+      .feature-card.hover-ready:nth-child(1):hover { transform: perspective(800px) rotateY(3deg) scale(1.04) translateY(-8px); }
+      .feature-card.hover-ready:nth-child(2):hover { transform: perspective(800px) rotateY(1deg) scale(1.04) translateY(-8px); }
+      .feature-card.hover-ready:nth-child(3):hover { transform: perspective(800px) rotateY(-1deg) scale(1.04) translateY(-8px); }
+      .feature-card.hover-ready:nth-child(4):hover { transform: perspective(800px) rotateY(-3deg) scale(1.04) translateY(-8px); }
     }
 
     /* Tablet: 2x2 grid */
@@ -1371,8 +1374,13 @@
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           entry.target.classList.add('visible');
+          // After intro animation completes, enable hover transitions
+          if (!entry.target.classList.contains('hover-ready')) {
+            setTimeout(() => entry.target.classList.add('hover-ready'), 1200);
+          }
         } else {
           entry.target.classList.remove('visible');
+          entry.target.classList.remove('hover-ready');
         }
       });
     }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
