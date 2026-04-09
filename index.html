@@ -107,6 +107,7 @@
     /* Transparent video elements */
     video { background: transparent; }
     #characterMediaContainer video { max-height: 100%; }
+    #characterMediaContainer { touch-action: pan-y pinch-zoom; }
     #heroCharCanvas { will-change: contents; clip-path: inset(0 2% 3% 2%); }
 
     /* Hide cursor in hero for 3D tile replacement */
@@ -118,7 +119,10 @@
       width: 100vw; height: 100vh;
       pointer-events: none;
       z-index: 9999;
+      transition: opacity 0.4s ease, visibility 0s 0.4s;
     }
+    #tileCursorCanvas.tile-hidden { opacity: 0; visibility: hidden; transition: opacity 0.4s ease, visibility 0s 0.4s; }
+    #tileCursorCanvas:not(.tile-hidden) { transition: opacity 0.4s ease, visibility 0s 0s; }
 
     /* Prevent widows in body copy */
     p, .feature-card-text p { text-wrap: pretty; }
@@ -556,7 +560,7 @@
             <div class="relative z-30 flex h-full w-full items-end justify-center pb-[26%] md:pb-[8%]">
               <div class="hero-content hero-intro-hidden flex flex-col items-center text-center px-6">
                 <h1 class="font-title text-white text-5xl md:text-7xl font-bold leading-[0.9] md:leading-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.6)]"><span class="md:hidden">Race for the Win.</span><span class="hidden md:inline">Reach for the Win.</span></h1>
-                <p class="mt-1.5 md:mt-2 text-gray-200 max-w-xl text-sm md:text-lg drop-shadow-lg">Mahjong, reimagined. Fast&nbsp;matches.<br class="hidden md:inline"> Bold characters. Browser. Phone.<br class="hidden md:inline"> Wherever&nbsp;you&nbsp;are.</p>
+                <p class="mt-1.5 md:mt-2 text-gray-200 max-w-xl text-sm md:text-lg drop-shadow-lg">A modern, social take on Mahjong.<br> Bold characters, fast rounds. Smart AI that learns how&nbsp;you&nbsp;play.<br> Same soul, new&nbsp;rhythm.</p>
 
                 <!-- Play Now Button -->
                 <a id="heroPlayBtn" href="https://game.mstardev.com/login" class="mt-4 md:mt-6" style="transition: opacity 0.4s ease;">
@@ -585,8 +589,8 @@
                       <img src="img/win.webp" alt="Your Rules" draggable="false">
                     </div>
                     <div class="feature-card-text">
-                      <h4>Your Rules</h4>
-                      <p>Casual. Competitive. Chill. You pick the&nbsp;vibe.</p>
+                      <h4>Play Your Way</h4>
+                      <p>Ranked, casual, or practice.<br>Your pace, your&nbsp;rules.</p>
                     </div>
                   </div>
                 </div>
@@ -600,7 +604,7 @@
                     </div>
                     <div class="feature-card-text">
                       <h4>Smart AI</h4>
-                      <p>They learn. They adapt. Don't get&nbsp;comfortable.</p>
+                      <p>AI that learns how you play.<br>Train, improve, level&nbsp;up.</p>
                     </div>
                   </div>
                 </div>
@@ -625,8 +629,8 @@
                       <img src="img/selfie.webp" alt="Bring Friends" draggable="false">
                     </div>
                     <div class="feature-card-text">
-                      <h4>Bring Friends</h4>
-                      <p>Or enemies. Same thing at the&nbsp;table.</p>
+                      <h4>Social Play</h4>
+                      <p>Invite friends or rivals. Mahjong is better&nbsp;shared.</p>
                     </div>
                   </div>
                 </div>
@@ -692,6 +696,7 @@
             <!-- Title -->
             <div class="relative z-10 max-w-3xl mx-auto text-center mb-6 md:mb-12">
               <h1 class="text-4xl md:text-7xl font-bold text-white drop-shadow-lg reveal">Meet the Stars</h1>
+              <p class="mt-3 text-sm md:text-base text-gray-300 max-w-md mx-auto drop-shadow-lg reveal">Earn them. Unlock them. Each one plays&nbsp;different.<br class="hidden md:inline"> Your roster, your&nbsp;style.</p>
             </div>
 
             <!-- Character Carousel — Side by Side -->
@@ -1093,7 +1098,17 @@
       startCharAutoPlay();
     }
 
-    startCharAutoPlay();
+    // Defer character autoplay until section is in viewport
+    const charSectionEl = document.getElementById('characters');
+    if (charSectionEl) {
+      const charVisObs = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) { startCharAutoPlay(); }
+          else { clearInterval(charAutoTimer); charAutoTimer = null; }
+        });
+      }, { threshold: 0.15 });
+      charVisObs.observe(charSectionEl);
+    }
 
     // Swipe/drag support on character carousel
     (function() {
@@ -1104,12 +1119,26 @@
       let startX = 0, startY = 0, tracking = false;
 
       targets.forEach(el => {
-        // Touch swipe (mobile)
+        // Touch swipe (mobile) — lock horizontal intent to prevent page scroll
+        let swipeLocked = false;
         el.addEventListener('touchstart', e => {
           startX = e.touches[0].clientX;
           startY = e.touches[0].clientY;
           tracking = true;
+          swipeLocked = false;
         }, { passive: true });
+
+        el.addEventListener('touchmove', e => {
+          if (!tracking) return;
+          const dx = Math.abs(e.touches[0].clientX - startX);
+          const dy = Math.abs(e.touches[0].clientY - startY);
+          if (!swipeLocked && dx > 10 && dx > dy * 1.2) {
+            swipeLocked = true;
+          }
+          if (swipeLocked) {
+            e.preventDefault();
+          }
+        }, { passive: false });
 
         el.addEventListener('touchend', e => {
           if (!tracking) return;
@@ -1120,6 +1149,7 @@
             if (dx < 0) nextCharacter();
             else prevCharacter();
           }
+          swipeLocked = false;
         }, { passive: true });
 
         // Mouse drag (desktop)
@@ -1210,7 +1240,17 @@
     function prevGameMode() { currentGameMode = (currentGameMode - 1 + gameModes.length) % gameModes.length; updateGameMode(); startGameModeAutoPlay(); }
     function goToGameMode(i) { currentGameMode = i; updateGameMode(); startGameModeAutoPlay(); }
 
-    startGameModeAutoPlay();
+    // Defer game mode autoplay until section is in viewport
+    const gameSectionEl = document.getElementById('game');
+    if (gameSectionEl) {
+      const gameVisObs = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) { startGameModeAutoPlay(); }
+          else { clearInterval(gameModeAutoTimer); gameModeAutoTimer = null; }
+        });
+      }, { threshold: 0.15 });
+      gameVisObs.observe(gameSectionEl);
+    }
 
     // Mobile feature carousel dots
     const featureCarousel = document.getElementById('featureCarousel');
@@ -2225,7 +2265,9 @@
           glowSprite.scale.set(gw, gh, 1);
           rimLight.position.set(tileGroup.position.x, tileGroup.position.y, -1.5);
 
-          renderer.render(scene, camera);
+          if (!canvas.classList.contains('tile-hidden')) {
+            renderer.render(scene, camera);
+          }
         })();
 
         window.addEventListener('resize', () => {
@@ -2352,7 +2394,12 @@
 </div>
 <script>
   // How To Play overlay open/close with animations
+  // Hide/show cursor tile when overlays open/close
+  function hideCursorTile() { const c = document.getElementById('tileCursorCanvas'); if (c) c.classList.add('tile-hidden'); }
+  function showCursorTile() { const c = document.getElementById('tileCursorCanvas'); if (c) c.classList.remove('tile-hidden'); }
+
   function openHowToPlay() {
+    hideCursorTile();
     const overlay = document.getElementById('howToPlayOverlay');
     overlay.style.display = 'flex';
     overlay.classList.remove('htp-hidden');
@@ -2371,6 +2418,7 @@
     document.body.style.overflow = 'hidden';
   }
   function closeHowToPlay() {
+    showCursorTile();
     const overlay = document.getElementById('howToPlayOverlay');
     overlay.classList.add('htp-hidden');
     overlay.classList.remove('htp-animate');
@@ -2381,6 +2429,7 @@
   }
   // Support overlay — reuse same animation pattern
   function openSupportOverlay() {
+    hideCursorTile();
     const overlay = document.getElementById('supportOverlay');
     overlay.style.display = 'flex';
     overlay.classList.remove('htp-hidden');
@@ -2397,6 +2446,7 @@
     document.body.style.overflow = 'hidden';
   }
   function closeSupportOverlay() {
+    showCursorTile();
     const overlay = document.getElementById('supportOverlay');
     overlay.classList.add('htp-hidden');
     overlay.classList.remove('htp-animate');
@@ -2407,6 +2457,7 @@
   }
   // Terms of Service overlay
   function openTermsOverlay() {
+    hideCursorTile();
     const overlay = document.getElementById('termsOverlay');
     overlay.style.display = 'flex';
     overlay.classList.remove('htp-hidden');
@@ -2423,6 +2474,7 @@
     document.body.style.overflow = 'hidden';
   }
   function closeTermsOverlay() {
+    showCursorTile();
     const overlay = document.getElementById('termsOverlay');
     overlay.classList.add('htp-hidden');
     overlay.classList.remove('htp-animate');
@@ -2433,6 +2485,7 @@
   }
   // Privacy Policy overlay
   function openPrivacyOverlay() {
+    hideCursorTile();
     const overlay = document.getElementById('privacyOverlay');
     overlay.style.display = 'flex';
     overlay.classList.remove('htp-hidden');
@@ -2449,6 +2502,7 @@
     document.body.style.overflow = 'hidden';
   }
   function closePrivacyOverlay() {
+    showCursorTile();
     const overlay = document.getElementById('privacyOverlay');
     overlay.classList.add('htp-hidden');
     overlay.classList.remove('htp-animate');
@@ -2459,6 +2513,7 @@
   }
   // Cookie Policy overlay
   function openCookiePolicyOverlay() {
+    hideCursorTile();
     const overlay = document.getElementById('cookiePolicyOverlay');
     overlay.style.display = 'flex';
     overlay.classList.remove('htp-hidden');
@@ -2475,6 +2530,7 @@
     document.body.style.overflow = 'hidden';
   }
   function closeCookiePolicyOverlay() {
+    showCursorTile();
     const overlay = document.getElementById('cookiePolicyOverlay');
     overlay.classList.add('htp-hidden');
     overlay.classList.remove('htp-animate');
@@ -2485,6 +2541,7 @@
   }
   // Cookie Settings overlay
   function openCookieSettingsOverlay() {
+    hideCursorTile();
     const overlay = document.getElementById('cookieSettingsOverlay');
     overlay.style.display = 'flex';
     overlay.classList.remove('htp-hidden');
@@ -2492,6 +2549,7 @@
     document.body.style.overflow = 'hidden';
   }
   function closeCookieSettingsOverlay() {
+    showCursorTile();
     const overlay = document.getElementById('cookieSettingsOverlay');
     overlay.classList.add('htp-hidden');
     overlay.classList.remove('htp-animate');
@@ -2540,7 +2598,7 @@
 
         <!-- Support image -->
         <div class="mb-8">
-          <img src="img/support.png" alt="Support" class="w-[85%] md:w-[75%] object-contain">
+          <img src="img/support.png" alt="Support" class="w-[85%] md:w-[52%] object-contain">
         </div>
 
         <hr class="border-gray-200 mb-8">
