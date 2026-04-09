@@ -85,18 +85,19 @@
     }
     .reveal-scale {
       opacity: 0;
-      transform: scale(0.85);
-      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: perspective(600px) translateY(120px) translateZ(-80px) rotateX(18deg) scale(0.88);
+      transform-origin: center bottom;
+      transition: opacity 1.6s cubic-bezier(0.22, 0.61, 0.36, 1), transform 1.6s cubic-bezier(0.22, 0.61, 0.36, 1);
     }
     .reveal.visible, .reveal-left.visible, .reveal-right.visible, .reveal-scale.visible {
       opacity: 1;
-      transform: translateY(0) translateX(0) scale(1);
+      transform: perspective(600px) translateY(0) translateX(0) translateZ(0) scale(1) rotateX(0deg);
     }
     /* Stagger delays for child elements */
-    .reveal-delay-1 { transition-delay: 0.1s; }
-    .reveal-delay-2 { transition-delay: 0.2s; }
-    .reveal-delay-3 { transition-delay: 0.3s; }
-    .reveal-delay-4 { transition-delay: 0.4s; }
+    .reveal-delay-1 { transition-delay: 0.12s; }
+    .reveal-delay-2 { transition-delay: 0.24s; }
+    .reveal-delay-3 { transition-delay: 0.36s; }
+    .reveal-delay-4 { transition-delay: 0.48s; }
 
     .bg-pattern {
       background-image: url('https://web.mstardev.com/images/bg/bg_pattern_v2.png');
@@ -134,26 +135,39 @@
       position: absolute;
       height: 100%;
       border-radius: 9999px;
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.25);
+      background: #8b0000;
+      border: none;
       transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
       pointer-events: none;
       top: 0;
     }
     .nav-btn { position: relative; border: none !important; background: none !important; }
     .nav-btn:hover { color: rgba(255,255,255,1); }
-    .nav-btn.active { color: #fff; }
+    .nav-btn.active { color: #fff; font-weight: 700; }
     .nav-btn:not(.active) { color: rgba(255,255,255,0.7); }
 
     /* Header fade */
     .site-nav {
       background: transparent;
-      transition: background 0.4s ease, backdrop-filter 0.4s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: background 0.6s ease, backdrop-filter 0.6s ease, -webkit-backdrop-filter 0.6s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .site-nav.scrolled {
-      background: rgba(89,5,5,0.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+    .site-nav::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 140%;
+      background: linear-gradient(to bottom, rgba(40,0,0,0.45) 0%, rgba(40,0,0,0.2) 50%, transparent 100%);
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+      mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+      opacity: 0;
+      transition: opacity 0.6s ease;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .site-nav.scrolled::before {
+      opacity: 1;
     }
     .site-nav.nav-hidden {
       transform: translateY(-100%);
@@ -302,7 +316,7 @@
     .feature-carousel {
       display: flex;
       gap: 24px;
-      padding: 40px 0;
+      padding: 20px 0;
       perspective: 1200px;
       justify-content: center;
       align-items: flex-end;
@@ -332,11 +346,11 @@
 
     .feature-card-img {
       width: 100%;
-      height: 320px;
+      height: 288px;
       display: flex;
       align-items: flex-end;
       justify-content: center;
-      padding: 20px 20px 0;
+      padding: 18px 18px 0;
       overflow: hidden;
     }
 
@@ -370,19 +384,22 @@
       line-height: 1.5;
     }
 
-    /* Desktop: 3D perspective tilt on hover */
+    /* Desktop: 3D perspective tilt on hover — only after reveal is done */
     @media (min-width: 768px) {
-      .feature-card {
+      .feature-card.reveal-scale:not(.visible) {
+        transform: perspective(600px) translateY(120px) translateZ(-80px) rotateX(18deg) scale(0.88);
+      }
+      .feature-card.visible {
         transform: rotateY(0deg) scale(1);
       }
-      .feature-card:hover {
+      .feature-card.visible:hover {
         transform: rotateY(0deg) scale(1.04) translateY(-8px);
         z-index: 10;
       }
-      .feature-card:nth-child(1):hover { transform: perspective(800px) rotateY(3deg) scale(1.04) translateY(-8px); }
-      .feature-card:nth-child(2):hover { transform: perspective(800px) rotateY(1deg) scale(1.04) translateY(-8px); }
-      .feature-card:nth-child(3):hover { transform: perspective(800px) rotateY(-1deg) scale(1.04) translateY(-8px); }
-      .feature-card:nth-child(4):hover { transform: perspective(800px) rotateY(-3deg) scale(1.04) translateY(-8px); }
+      .feature-card.visible:nth-child(1):hover { transform: perspective(800px) rotateY(3deg) scale(1.04) translateY(-8px); }
+      .feature-card.visible:nth-child(2):hover { transform: perspective(800px) rotateY(1deg) scale(1.04) translateY(-8px); }
+      .feature-card.visible:nth-child(3):hover { transform: perspective(800px) rotateY(-1deg) scale(1.04) translateY(-8px); }
+      .feature-card.visible:nth-child(4):hover { transform: perspective(800px) rotateY(-3deg) scale(1.04) translateY(-8px); }
     }
 
     /* Tablet: 2x2 grid */
@@ -457,7 +474,7 @@
       <div>
         <!-- ========== NAV ========== -->
         <nav class="site-nav fixed top-0 left-0 w-full z-50">
-          <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between relative z-10">
             <!-- Mobile Hamburger -->
             <div class="md:hidden">
               <button id="hamburger" class="cursor-pointer flex flex-col h-8 w-8 justify-center items-center gap-[4px] group">
@@ -470,18 +487,18 @@
             <img alt="Logo" class="h-10 absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0 md:mx-0" src="https://web.mstardev.com/images/Logo.png">
 
             <!-- Desktop Nav Links -->
-            <div class="nav-container hidden md:flex items-center gap-1 text-white font-semibold rounded-full bg-white/5 border border-white/10 px-1 py-1">
+            <div class="nav-container hidden md:flex items-center gap-0 text-white font-semibold rounded-full bg-white/5 px-0 py-0">
               <div class="nav-pill" id="navPill"></div>
               <button class="nav-btn active px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="scrollToSection('hero')">HOME</button>
               <button class="nav-btn px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="scrollToSection('features')">FEATURES</button>
               <button class="nav-btn px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="scrollToSection('game')">GAME</button>
               <button class="nav-btn px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="scrollToSection('characters')">CHARACTER</button>
               <button class="nav-btn px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="scrollToSection('download')">DOWNLOAD</button>
-              <button class="nav-btn px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="scrollToSection('footer')">SUPPORT</button>
+              <button class="nav-btn px-4 py-1.5 rounded-full transition cursor-pointer text-sm" onclick="openSupportOverlay()">SUPPORT</button>
             </div>
 
             <!-- Login Button -->
-            <a href="https://game.mstardev.com/" class="hidden md:block">
+            <a href="https://game.mstardev.com/login" class="hidden md:block">
               <button class="bg-ms_red hover:bg-[#B00400] text-white font-bold px-5 py-2 rounded-md transition cursor-pointer text-sm">LOG IN / REGISTER</button>
             </a>
           </div>
@@ -495,7 +512,7 @@
             <button class="glass-btn text-white/90 font-semibold py-3 px-4 text-left text-sm tracking-wide" onclick="scrollToSection('game')">GAME</button>
             <button class="glass-btn text-white/90 font-semibold py-3 px-4 text-left text-sm tracking-wide" onclick="scrollToSection('characters')">CHARACTER</button>
             <button class="glass-btn text-white/90 font-semibold py-3 px-4 text-left text-sm tracking-wide" onclick="scrollToSection('download')">DOWNLOAD</button>
-            <button class="glass-btn text-white/90 font-semibold py-3 px-4 text-left text-sm tracking-wide" onclick="scrollToSection('footer')">SUPPORT</button>
+            <button class="glass-btn text-white/90 font-semibold py-3 px-4 text-left text-sm tracking-wide" onclick="openSupportOverlay()">SUPPORT</button>
           </div>
         </div>
 
@@ -542,7 +559,7 @@
                 <p class="mt-1.5 md:mt-2 text-gray-200 max-w-xl text-sm md:text-lg drop-shadow-lg">Mahjong, reimagined. Fast&nbsp;matches.<br class="hidden md:inline"> Bold characters. Browser. Phone.<br class="hidden md:inline"> Wherever&nbsp;you&nbsp;are.</p>
 
                 <!-- Play Now Button -->
-                <a id="heroPlayBtn" href="https://game.mstardev.com/" class="mt-4 md:mt-6" style="transition: opacity 0.4s ease;">
+                <a id="heroPlayBtn" href="https://game.mstardev.com/login" class="mt-4 md:mt-6" style="transition: opacity 0.4s ease;">
                   <button class="bg-ms_red hover:bg-red-700 text-white font-bold text-base md:text-lg px-8 md:px-10 py-3 rounded-md shadow-[0_4px_30px_rgba(208,5,1,0.5)] transition cursor-pointer hover:shadow-[0_4px_40px_rgba(208,5,1,0.7)]">PLAY NOW</button>
                 </a>
               </div>
@@ -552,8 +569,8 @@
 
         <!-- ========== FEATURES SECTION (3D Carousel) ========== -->
         <div id="features">
-          <section class="px-4 md:px-6 py-12 md:py-20 bg-ms_bg text-white overflow-hidden">
-            <div class="max-w-3xl mx-auto text-center mb-10 md:mb-16">
+          <section class="px-4 md:px-6 pt-8 md:pt-14 pb-12 md:pb-20 bg-ms_bg text-white overflow-hidden">
+            <div class="max-w-3xl mx-auto text-center mb-5 md:mb-8">
               <h1 class="font-title text-4xl md:text-7xl font-bold mb-4 leading-[0.9] reveal">Easy to learn.<br>Hard to stop.</h1>
               <p class="text-gray-300 reveal reveal-delay-1">Classic Mahjong. Fresh characters. Fair matches.<br>No pay-to-win. Just play.</p>
             </div>
@@ -562,7 +579,7 @@
             <div class="feature-carousel-wrapper relative max-w-7xl mx-auto">
               <div class="feature-carousel" id="featureCarousel">
                 <!-- Card 1: Your Rules -->
-                <div class="feature-card reveal-scale reveal-delay-1" data-index="0">
+                <div class="feature-card reveal-scale" data-index="0" style="transition-delay:0.15s">
                   <div class="feature-card-inner">
                     <div class="feature-card-img">
                       <img src="img/win.webp" alt="Your Rules" draggable="false">
@@ -575,7 +592,7 @@
                 </div>
 
                 <!-- Card 2: Smart AI -->
-                <div class="feature-card reveal-scale reveal-delay-2" data-index="1">
+                <div class="feature-card reveal-scale" data-index="1" style="transition-delay:0.35s">
                   <div class="feature-card-inner">
                     <div class="feature-card-img relative">
                       <img src="img/AI_off.webp" alt="Smart AI" class="absolute inset-0 w-full h-full object-contain z-10" draggable="false">
@@ -589,7 +606,7 @@
                 </div>
 
                 <!-- Card 3: Collect Them All -->
-                <div class="feature-card reveal-scale reveal-delay-3" data-index="2">
+                <div class="feature-card reveal-scale" data-index="2" style="transition-delay:0.55s">
                   <div class="feature-card-inner">
                     <div class="feature-card-img">
                       <img src="img/grannytreasure.webp" alt="Collect Them All" draggable="false">
@@ -602,7 +619,7 @@
                 </div>
 
                 <!-- Card 4: Bring Friends -->
-                <div class="feature-card reveal-scale reveal-delay-4" data-index="3">
+                <div class="feature-card reveal-scale" data-index="3" style="transition-delay:0.75s">
                   <div class="feature-card-inner">
                     <div class="feature-card-img">
                       <img src="img/selfie.webp" alt="Bring Friends" draggable="false">
@@ -741,7 +758,7 @@
                 <h1 class="text-4xl md:text-7xl font-bold mb-4 drop-shadow-lg">Play Anywhere</h1>
                 <p class="text-gray-300 mb-8 text-lg">Couch. Commute. Lunch break. We&nbsp;don't&nbsp;judge.</p>
 
-                <a href="https://game.mstardev.com/">
+                <a href="https://game.mstardev.com/login">
                   <button class="bg-ms_red hover:bg-[#B00400] text-white font-bold px-10 py-3 rounded-md shadow-lg transition cursor-pointer mb-6">PLAY NOW</button>
                 </a>
 
@@ -958,7 +975,9 @@
         quote: '"I don\'t have time for this. Wait\u2026 one more round."',
         desc: 'Busy. Stressed. Somehow still winning. Briefcase in one hand, phone in the other. Always late. Never loses.',
         img: 'img/executive_2584.webp',
-        type: 'image'
+        type: useVideos ? 'video' : 'image',
+        videoWebm: 'video/executive.webm',
+        videoMp4: 'video/executive.mp4'
       }
     ];
 
@@ -1052,7 +1071,7 @@
     let charAutoTimer = null;
     function startCharAutoPlay() {
       clearInterval(charAutoTimer);
-      charAutoTimer = setInterval(() => { currentChar = (currentChar + 1) % characters.length; updateCharacter('left'); }, 5000);
+      charAutoTimer = setInterval(() => { currentChar = (currentChar + 1) % characters.length; updateCharacter('left'); }, 8000);
     }
 
     function nextCharacter() {
@@ -1184,7 +1203,7 @@
     let gameModeAutoTimer = null;
     function startGameModeAutoPlay() {
       clearInterval(gameModeAutoTimer);
-      gameModeAutoTimer = setInterval(() => { currentGameMode = (currentGameMode + 1) % gameModes.length; updateGameMode(); }, 4000);
+      gameModeAutoTimer = setInterval(() => { currentGameMode = (currentGameMode + 1) % gameModes.length; updateGameMode(); }, 7000);
     }
 
     function nextGameMode() { currentGameMode = (currentGameMode + 1) % gameModes.length; updateGameMode(); startGameModeAutoPlay(); }
@@ -1281,6 +1300,7 @@
     }, { passive: true });
 
     // Scroll reveal with Intersection Observer
+    // Elements above the fold get revealed immediately; others wait for scroll
     const revealObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -1288,11 +1308,29 @@
           revealObserver.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+    }, { threshold: 0.1, rootMargin: '0px 0px -80px 0px' });
 
-    document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale').forEach(el => {
+    // Non-card elements: observe normally (one-shot)
+    document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale:not(.feature-card)').forEach(el => {
       revealObserver.observe(el);
     });
+
+    // Feature cards: toggle visible on scroll in/out so animation replays
+    const cardToggleObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        } else {
+          entry.target.classList.remove('visible');
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+    const featureCards = document.querySelectorAll('.feature-card.reveal-scale');
+    window.addEventListener('scroll', function armCards() {
+      window.removeEventListener('scroll', armCards);
+      featureCards.forEach(card => cardToggleObserver.observe(card));
+    }, { passive: true });
 
     // ===== Hero: mobile = looping video, desktop = cursor scrub =====
     const heroCanvas = document.getElementById('heroCharCanvas');
@@ -1339,22 +1377,19 @@
         heroCanvas.width = w;
         heroCanvas.height = h;
 
+        // Draw first frame immediately as static placeholder
+        heroCtx.clearRect(0, 0, w, h);
+        heroCtx.drawImage(offV, 0, 0);
+
         const tmp = document.createElement('canvas');
         tmp.width = w; tmp.height = h;
         const tCtx = tmp.getContext('2d');
-        let firstDrawn = false;
 
         function grab() {
           tCtx.clearRect(0, 0, w, h);
           tCtx.drawImage(offV, 0, 0);
-
-          // createImageBitmap is fast & synchronous-draw later
           createImageBitmap(tmp).then(bmp => {
             heroFrames.push(bmp);
-            if (!firstDrawn) {
-              heroCtx.drawImage(bmp, 0, 0);
-              firstDrawn = true;
-            }
           });
         }
 
@@ -1365,24 +1400,20 @@
           }
           offV.requestVideoFrameCallback(onFrame);
         } else {
-          // Fallback: timeupdate
           let lastT = -1;
           offV.addEventListener('timeupdate', () => {
             if (offV.currentTime !== lastT) { lastT = offV.currentTime; grab(); }
           });
         }
 
+        offV.playbackRate = 1.0; // 1x — must capture every frame for correct SEGS mapping
         offV.play();
         offV.addEventListener('ended', () => {
-          // Wait for async createImageBitmap calls to finish
           setTimeout(() => {
             if (heroFrames.length > 0) {
-              heroCurrentIdx = 0;
-              heroCtx.drawImage(heroFrames[0], 0, 0);
               heroReady = true;
-              console.log('Hero scrub ready:', heroFrames.length, 'frames');
             }
-          }, 500);
+          }, 300);
         });
       }
 
@@ -1522,8 +1553,8 @@
       // --- Main scrub loop ---
       (function scrubLoop(ts) {
         requestAnimationFrame(scrubLoop);
-        // Work progressively — scrub with whatever frames are captured so far
-        if (heroFrames.length < 10) return;
+        // Progressive: scrub available frames, clamp to what's captured so far
+        if (heroFrames.length < 30) return;
 
         _smoothX += (_rawX - _smoothX) * INPUT_LERP;
         _smoothY += (_rawY - _smoothY) * INPUT_LERP;
@@ -2038,33 +2069,40 @@
 
         // Default orientation: 0 (no rotation)
 
-        // --- Holy glow sprite behind tile ---
-        const glowC = document.createElement('canvas'); glowC.width = 256; glowC.height = 256;
-        const glowCtx = glowC.getContext('2d');
-        const gg = glowCtx.createRadialGradient(128, 128, 0, 128, 128, 128);
-        gg.addColorStop(0, 'rgba(255,180,80,0.9)');
-        gg.addColorStop(0.15, 'rgba(255,100,20,0.7)');
-        gg.addColorStop(0.35, 'rgba(220,30,0,0.4)');
-        gg.addColorStop(0.6, 'rgba(180,10,0,0.15)');
-        gg.addColorStop(1, 'rgba(100,0,0,0)');
-        glowCtx.fillStyle = gg; glowCtx.fillRect(0, 0, 256, 256);
+        // --- Glow: tight rectangular, subtle magical pulse ---
+        const glowTex = (function() {
+          const w = 256, h = 320;
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const ctx = c.getContext('2d');
+          // Single soft blurred rounded rect
+          ctx.save();
+          ctx.filter = 'blur(28px)';
+          ctx.fillStyle = 'rgba(255,180,80,0.35)';
+          ctx.beginPath();
+          ctx.roundRect(50, 50, w - 100, h - 100, 20);
+          ctx.fill();
+          ctx.restore();
+          return new THREE.CanvasTexture(c);
+        })();
 
         const glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({
-          map: new THREE.CanvasTexture(glowC),
-          blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.85
+          map: glowTex,
+          blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.45
         }));
-        glowSprite.scale.set(2.8, 3.4, 1);
-        glowSprite.position.z = -0.2;
+        glowSprite.scale.set(1.3, 1.6, 1);
+        glowSprite.position.z = -0.1;
         tileGroup.add(glowSprite);
         scene.add(tileGroup);
 
-        // --- Lighting (attached to tileGroup so light rotates with the tile) ---
-        scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-        const keyLight = new THREE.DirectionalLight(0xfff5e0, 0.85);
-        keyLight.position.set(2, -1, 5); tileGroup.add(keyLight);
-        const fillLight = new THREE.DirectionalLight(0xffeedd, 0.3);
-        fillLight.position.set(-2, -1, 4); tileGroup.add(fillLight);
-        const rimLight = new THREE.PointLight(0xff6622, 2.0, 6);
+        // --- Lighting (world space — consistent regardless of tile rotation) ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const keyLight = new THREE.DirectionalLight(0xfff5e0, 0.9);
+        keyLight.position.set(3, 2, 6); scene.add(keyLight);
+        const fillLight = new THREE.DirectionalLight(0xffeedd, 0.35);
+        fillLight.position.set(-3, -1, 5); scene.add(fillLight);
+        const backLight = new THREE.DirectionalLight(0xffddc0, 0.5);
+        backLight.position.set(0, 2, -5); scene.add(backLight);
+        const rimLight = new THREE.PointLight(0xff6622, 1.8, 8);
         rimLight.position.set(0, 0, -1.5); scene.add(rimLight);
 
         // --- State ---
@@ -2082,16 +2120,19 @@
         tileGroup.visible = false;
         canvas.style.opacity = '0';
         canvas.style.transition = 'opacity 0.3s ease';
+        let mouseClientX = 0, mouseClientY = 0;
 
-        heroEl.addEventListener('mouseenter', () => {
-          isInHero = true;
-          if (!isOverCta) { tileGroup.visible = true; canvas.style.opacity = '1'; }
-        });
-        heroEl.addEventListener('mouseleave', () => {
-          isInHero = false;
-          tileGroup.visible = false;
-          canvas.style.opacity = '0';
-        });
+        // Track mouse position globally and check hero bounds continuously
+        // (mouseenter/mouseleave can desync when header hides/shows during scroll)
+        document.addEventListener('mousemove', (e) => {
+          mouseClientX = e.clientX;
+          mouseClientY = e.clientY;
+          const rect = heroEl.getBoundingClientRect();
+          const wasIn = isInHero;
+          isInHero = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+          if (isInHero && !wasIn && !isOverCta) { tileGroup.visible = true; canvas.style.opacity = '1'; }
+          if (!isInHero && wasIn) { tileGroup.visible = false; canvas.style.opacity = '0'; }
+        }, { passive: true });
 
         // Bottom area: below 60% of hero height — tile flips to show PLAY NOW
         // Clicking anywhere in bottom area navigates to game
@@ -2135,7 +2176,7 @@
           if (!isInBottomArea) return;
           const el = e.target;
           if (el.closest('a') || el.closest('button')) return;
-          window.location.href = 'https://game.mstardev.com/';
+          window.location.href = 'https://game.mstardev.com/login';
         });
 
         // --- Animation loop ---
@@ -2176,11 +2217,12 @@
           currentQuat.slerp(targetQuat, 0.1);
           tileGroup.quaternion.copy(currentQuat);
 
-          // Glow
-          const gp = 0.7 + speed * 8 + Math.sin(t * 3) * 0.15;
-          glowSprite.material.opacity = Math.min(gp, 1.0);
-          const gs = 2.8 + speed * 4 + Math.sin(t * 2.5) * 0.2;
-          glowSprite.scale.set(gs, gs * 1.2, 1);
+          // Glow — tight rect, subtle pulse
+          const pulse = Math.sin(t * 2.0) * 0.05 + Math.sin(t * 3.5) * 0.025;
+          glowSprite.material.opacity = Math.min(0.55, 0.35 + speed * 2.5 + pulse);
+          const gw = 1.3 + speed * 0.4 + Math.sin(t * 1.4) * 0.03;
+          const gh = 1.6 + speed * 0.5 + Math.sin(t * 1.7) * 0.04;
+          glowSprite.scale.set(gw, gh, 1);
           rimLight.position.set(tileGroup.position.x, tileGroup.position.y, -1.5);
 
           renderer.render(scene, camera);
