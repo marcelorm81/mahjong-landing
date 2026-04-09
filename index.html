@@ -438,6 +438,16 @@
         flex: 0 0 85vw;
         scroll-snap-align: center;
       }
+      /* Simple fade on mobile — no 3D transforms */
+      .feature-card.reveal-scale {
+        transform: none;
+        opacity: 0;
+        transition: opacity 0.6s ease;
+      }
+      .feature-card.reveal-scale.visible {
+        opacity: 1;
+        transform: none;
+      }
     }
 
     /* AI glow pulse */
