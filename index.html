@@ -328,9 +328,10 @@
 
     .feature-card {
       flex: 0 0 280px;
-      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), z-index 0s;
       transform-style: preserve-3d;
       cursor: pointer;
+      will-change: transform;
     }
 
     .feature-card-inner {
@@ -338,7 +339,7 @@
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 20px;
       overflow: hidden;
-      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
       backdrop-filter: blur(10px);
     }
 
@@ -363,7 +364,7 @@
       max-width: 100%;
       object-fit: contain;
       user-select: none;
-      transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .feature-card:hover .feature-card-img img {
@@ -664,7 +665,7 @@
               <!-- Name + Description — Top -->
               <div class="text-center max-w-md mx-auto mb-8 md:mb-12 reveal">
                 <h1 id="gameModeName" class="text-4xl md:text-7xl font-bold text-white mb-3 char-fade-active drop-shadow-lg">Bang Bang Mahjong</h1>
-                <p id="gameModeDesc" class="text-gray-400 text-sm md:text-base char-fade-active" style="transition-delay: 0.1s">Fast. Loud. No time to think. That's the point.</p>
+                <p id="gameModeDesc" class="text-white text-sm md:text-base char-fade-active" style="transition-delay: 0.1s">Fast. Loud. No time to think. That's the point.</p>
               </div>
 
               <!-- Game Mode Image -->
@@ -727,7 +728,7 @@
                 <div class="flex-1 text-center md:text-left max-w-xs md:max-w-sm reveal-right reveal-delay-2">
                   <h2 id="charName" class="text-3xl md:text-4xl font-bold text-white mb-3 char-fade-active">Tony Kong</h2>
                   <p id="charQuote" class="text-white/70 text-base md:text-lg italic mb-4 char-fade-active" style="transition-delay: 0.1s">"I don't chase Luck. I create it."</p>
-                  <p id="charDesc" class="text-gray-400 text-sm md:text-base leading-relaxed mb-8 char-fade-active" style="transition-delay: 0.2s">Confident. Calculated. Already read your hand. Turns bad tiles into winning moves. Every. Single. Time.</p>
+                  <p id="charDesc" class="text-white text-sm md:text-base leading-relaxed mb-8 char-fade-active" style="transition-delay: 0.2s">Confident. Calculated. Already read your hand. Turns bad tiles into winning moves. Every. Single. Time.</p>
 
                   <!-- Progress Bar -->
                   <div class="flex gap-2 mb-6 justify-center md:justify-start" id="charProgressBars">
