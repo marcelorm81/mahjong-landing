@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ms_red: #d00501;
+  --color-ms_darkred: #4a0000;
+  --color-ms_bg: #620000;
+  --font-title: 'ClashDisplay', sans-serif;
+  --font-body: 'ClashDisplay', sans-serif;
+}
+
+/* ===== Font Face Declarations ===== */
+@font-face {
+  font-family: 'ClashDisplay';
+  src: url('/fonts/ClashDisplay-Regular.woff2') format('woff2'),
+       url('/fonts/ClashDisplay-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'ClashDisplay';
+  src: url('/fonts/ClashDisplay-Medium.woff2') format('woff2'),
+       url('/fonts/ClashDisplay-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'ClashDisplay';
+  src: url('/fonts/ClashDisplay-Semibold.woff2') format('woff2'),
+       url('/fonts/ClashDisplay-Semibold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'ClashDisplay';
+  src: url('/fonts/ClashDisplay-Bold.woff2') format('woff2'),
+       url('/fonts/ClashDisplay-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== Global Styles ===== */
+html {
+  scroll-behavior: smooth;
+  background: #590505;
+}
+
+body {
+  font-family: 'ClashDisplay', sans-serif;
+  background: #590505;
+  color: white;
+  overflow-x: hidden;
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+/* Transparent video */
+video { background: transparent; }
+
+#root {
+  width: 100%;
+  min-height: 100svh;
+}
+
+@import './styles/animations.css';
